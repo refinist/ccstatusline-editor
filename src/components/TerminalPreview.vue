@@ -14,7 +14,7 @@ const { t } = useI18n();
 
 <template>
   <div
-    class="border-border overflow-hidden rounded-lg border bg-[#f9f9f9] dark:bg-[#23272f]"
+    class="border-border overflow-hidden rounded-lg border bg-(--ccse-terminal-bg)"
   >
     <div class="border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
       <span class="flex gap-2">

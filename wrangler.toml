@@ -15,10 +15,10 @@ not_found_handling = "single-page-application"
 # off `assets` (including the SPA fallback) without invoking worker/index.ts at all.
 run_worker_first = ["/api/*"]
 
-# Created with: pnpm exec wrangler kv namespace create SHARES
-# Then paste the returned `id` (and, for local/preview testing, a
-# `pnpm exec wrangler kv namespace create SHARES --preview` id as `preview_id`) below.
+# Production share storage. Local `wrangler dev` never touches it — KV is
+# simulated on disk under .wrangler/state. No `preview_id` on purpose: it's
+# only consulted by `wrangler dev --remote`, which we don't use; add one back
+# (wrangler kv namespace create <name>) if that ever changes.
 [[kv_namespaces]]
 binding = "SHARES"
 id = "3c5b7e59b635426c996c1bc64af28083"
-preview_id = "e083dcc57b7640a080755f2a0d34686b"

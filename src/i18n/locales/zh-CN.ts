@@ -103,6 +103,11 @@ export default {
     rateLimited: '分享太频繁，请等一分钟再试',
     unavailable: '分享服务暂时不可用，请稍后重试'
   },
+  applyCmd: {
+    label: '复制命令',
+    hint: '复制一条命令，在终端粘贴执行即可把当前配置应用到本地',
+    copied: '命令已复制，打开终端粘贴执行即可应用'
+  },
   showcase: {
     label: '保存图片',
     hint: '下载当前预览的高清截图并复制到剪贴板，可以分享到任何地方',
@@ -520,7 +525,7 @@ export default {
     },
     submitCta: {
       title: '分享你的配置',
-      desc: '有值得一看的状态栏配置？提交上来，说不定会被收录展示在这里。',
+      desc: '有值得一看的状态栏配置？提交上来，说不定会被收录展示在这里。😄',
       button: '提交'
     },
     moreTemplates: '更多模板'

@@ -95,6 +95,17 @@ function startResize(e: PointerEvent) {
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
 }
+
+// Camera-flash overlay, fired by the "Save image" button (via template ref):
+// the exported PNG is rendered from a separate offscreen instance, so this
+// visible card flashing is the only feedback that a "photo" was just taken.
+// v-if + animationend keeps the overlay out of the DOM except mid-flash.
+const flashing = ref(false);
+function flash() {
+  flashing.value = false; // restart cleanly if a previous flash is mid-animation
+  requestAnimationFrame(() => (flashing.value = true));
+}
+defineExpose({ flash });
 </script>
 
 <template>
@@ -102,7 +113,7 @@ function startResize(e: PointerEvent) {
        theme's muted-gray token) so it reads as a real terminal in both modes. -->
   <div
     ref="termRef"
-    class="group border-border relative max-w-full shrink-0 overflow-hidden rounded-lg border bg-[#f9f9f9] dark:bg-[#23272f]"
+    class="group border-border relative max-w-full shrink-0 overflow-hidden rounded-lg border bg-(--ccse-terminal-bg)"
     :class="snapping ? 'ccse-term-snap' : ''"
     :style="termWidth != null ? { width: `${termWidth}px` } : undefined"
   >
@@ -164,6 +175,15 @@ function startResize(e: PointerEvent) {
       "
       @pointerdown="startResize"
       @dblclick="maximizeWidth"
+    />
+
+    <!-- Camera-flash overlay for "Save image" — sits above everything in the
+         card (the resize handle is z-5) and never intercepts clicks. -->
+    <div
+      v-if="flashing"
+      class="ccse-term-flash pointer-events-none absolute inset-0 z-10"
+      aria-hidden="true"
+      @animationend="flashing = false"
     />
   </div>
 </template>

@@ -61,6 +61,10 @@ html {
   --ring: oklch(0.708 0 0);
   --warning: oklch(0.62 0.16 65);
   --radius: 0.625rem;
+  /* Terminal-preview surface color — pinned hexes (not the theme's muted gray)
+     so the preview reads as a real terminal; anything drawn over the terminal
+     (e.g. the overflow-ellipsis fade) must use this, not --muted. */
+  --ccse-terminal-bg: #f9f9f9;
 }
 
 .dark {
@@ -84,6 +88,7 @@ html {
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
   --warning: oklch(0.82 0.16 82);
+  --ccse-terminal-bg: #23272f;
 }
 
 @layer base {
@@ -161,6 +166,66 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .ccse-gradient-flow {
     animation: none;
+  }
+}
+
+/* ============ Title easter egg: pogo letters ============
+   Hovering the header title (EditorPage.vue) makes each character do one squash-
+   and-stretch hop. Per-char randomness rides in on inline CSS vars set from JS:
+   --jd delay, --jh jump height, --jr tilt, --js mid-air growth, --jc a confetti
+   color. The chars are permanently inline-block so arming the animation never
+   reflows the title. */
+.ccse-title-ch {
+  display: inline-block;
+  white-space: pre; /* the space between words must keep its width as its own span */
+}
+/* While mid-pogo the letters need to escape `truncate`'s overflow clip (the
+   title's line box has almost no headroom above the glyphs); the ellipsis
+   behavior comes right back when the bounce ends ~0.8s later. */
+.ccse-title-bouncing {
+  overflow: visible !important;
+}
+/* The char paints its own confetti color over the parent's gradient for the
+   duration of the hop. text-fill-color must be re-set too: the parent's
+   `transparent` would otherwise inherit through and win over `color`. Doubling
+   as a workaround: browsers get flaky painting a background-clip:text parent's
+   gradient onto transformed children, and an own fill sidesteps that entirely. */
+.ccse-title-ch--pogo {
+  animation: ccse-title-pogo 0.6s cubic-bezier(0.28, 0.84, 0.42, 1)
+    var(--jd, 0s) both;
+  color: var(--jc, #f18271);
+  -webkit-text-fill-color: var(--jc, #f18271);
+}
+@keyframes ccse-title-pogo {
+  0% {
+    transform: none;
+  }
+  /* anticipation squat… */
+  12% {
+    transform: translateY(0.08em) scaleY(0.88);
+  }
+  /* …boing (random height + tilt + a puff of random growth at the apex) */
+  40% {
+    transform: translateY(var(--jh, -0.5em)) rotate(var(--jr, 8deg))
+      scale(var(--js, 1.2)) scaleY(1.08) scaleX(0.94);
+  }
+  /* squashy landing */
+  64% {
+    transform: translateY(0.06em) scaleY(0.9) scaleX(1.08);
+  }
+  /* one small rebound, then settle */
+  82% {
+    transform: translateY(calc(var(--jh, -0.5em) * 0.18));
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-title-ch--pogo {
+    animation: none;
+    color: inherit;
+    -webkit-text-fill-color: inherit;
   }
 }
 
@@ -387,7 +452,7 @@ body.ccse-grabbing * {
   align-items: center;
   padding: 0 0.15em 0 1.6em;
   color: var(--muted-foreground);
-  background: linear-gradient(90deg, transparent, var(--muted) 55%);
+  background: linear-gradient(90deg, transparent, var(--ccse-terminal-bg) 55%);
   pointer-events: none;
   user-select: none;
 }
@@ -496,6 +561,41 @@ body.ccse-grabbing * {
 @media (prefers-reduced-motion: reduce) {
   .ccse-term-snap {
     transition: none;
+  }
+}
+
+/* Camera flash when "Save image" is clicked: a radial hot-spot (bright center,
+   falling off toward the edges like a real flashgun's vignette) that pops in
+   almost instantly and decays exponentially. Peak brightness stays well under
+   full white so the terminal content ghosts through, which reads as "lit up"
+   rather than "covered". Opacity stays 0 outside the animation so the overlay
+   never lingers. */
+.ccse-term-flash {
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 90% 160% at 50% 42%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.5) 55%,
+    rgba(255, 255, 255, 0.18) 100%
+  );
+  animation: ccse-flash 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+@keyframes ccse-flash {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.75;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Keep a (near-instant) animation so animationend still fires and the
+     overlay's v-if is cleaned up. */
+  .ccse-term-flash {
+    animation-duration: 1ms;
   }
 }
 

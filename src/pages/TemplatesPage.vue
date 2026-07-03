@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ArrowLeft,
+  Camera,
   Check,
   ExternalLink,
   Import,
@@ -10,7 +11,7 @@ import {
   Terminal
 } from '@lucide/vue';
 import { useClipboard } from '@vueuse/core';
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
@@ -22,6 +23,12 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover';
 import { buildApplyCommand } from '@/lib/applyCommand';
+import {
+  copyPngToClipboard,
+  downloadBlob,
+  exportElementPngBlob,
+  exportFilename
+} from '@/lib/exportImage';
 import { buildTemplateShareUrl } from '@/lib/shareConfig';
 import { usePendingTemplateStore } from '@/stores/pendingTemplate';
 import { TEMPLATES, type Template } from '@/templates';
@@ -62,6 +69,37 @@ function onCopyCommand(tpl: Template) {
     `${tpl.id}:cmd`,
     t('templates.commandCopied')
   );
+}
+
+// "Save image": the same fixed-width PNG export (download + clipboard copy) the
+// editor's preview row offers, fed by an offscreen TerminalPreview of this
+// card's config. See LineEditor.vue's onShowcase for why this is deliberately
+// NOT an async function (Safari's clipboard user-gesture window).
+const exportPreviewRef = ref<HTMLElement | null>(null);
+const showcasing = ref<Template | null>(null);
+function onShowcase(tpl: Template) {
+  if (showcasing.value) return;
+  showcasing.value = tpl;
+  const blobPromise = (async () => {
+    await nextTick();
+    const el = exportPreviewRef.value;
+    if (!el) throw new Error('export preview not mounted');
+    return await exportElementPngBlob(el);
+  })();
+  const copiedPromise = copyPngToClipboard(blobPromise);
+  const finish = async () => {
+    try {
+      const blob = await blobPromise;
+      downloadBlob(blob, exportFilename());
+      const copied = await copiedPromise;
+      toast.success(t(copied ? 'showcase.doneCopied' : 'showcase.done'));
+    } catch {
+      toast.error(t('showcase.failed'));
+    } finally {
+      showcasing.value = null;
+    }
+  };
+  finish();
 }
 
 // "Use this template": confirm (it overwrites the editor's current config and
@@ -128,7 +166,13 @@ function confirmApply(tpl: Template) {
           class="border-border bg-card relative mb-5 flex break-inside-avoid flex-col gap-3 rounded-lg border p-4"
         >
           <div>
-            <div class="flex items-center justify-between gap-3">
+            <!-- flex-wrap: on narrow screens the three labelled buttons don't fit
+                 next to the title, so the whole button group drops to a second
+                 row (ml-auto keeps it right-aligned there) instead of the title
+                 truncating away. -->
+            <div
+              class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
+            >
               <div class="flex min-w-0 items-baseline gap-1.5">
                 <h2
                   class="text-foreground min-w-0 truncate text-sm font-semibold"
@@ -147,7 +191,7 @@ function confirmApply(tpl: Template) {
               </div>
 
               <!-- Same style as the clone/delete buttons in the editor's Inspector panel: outline stroke, size-3.5 icons -->
-              <div class="flex shrink-0 items-center gap-1">
+              <div class="ml-auto flex shrink-0 items-center gap-1">
                 <Popover
                   :open="applyTarget === tpl.id"
                   @update:open="applyTarget = $event ? tpl.id : null"
@@ -193,6 +237,17 @@ function confirmApply(tpl: Template) {
                     </div>
                   </PopoverContent>
                 </Popover>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  class="text-muted-foreground"
+                  :title="t('showcase.hint')"
+                  :disabled="showcasing !== null"
+                  @click="onShowcase(tpl)"
+                >
+                  <Camera class="size-3.5" />
+                  {{ t('showcase.label') }}
+                </Button>
                 <Button
                   variant="outline"
                   size="xs"
@@ -261,6 +316,19 @@ function confirmApply(tpl: Template) {
         </div>
       </div>
     </main>
+
+    <!-- Offscreen showcase capture target — same zero-clipped setup as the
+         editor's (see LineEditor.vue for the layout/opacity caveats). Mounted
+         only while a card's export is in flight. -->
+    <div
+      v-if="showcasing"
+      aria-hidden="true"
+      class="fixed top-0 left-0 size-0 overflow-hidden"
+    >
+      <div ref="exportPreviewRef" class="absolute">
+        <TerminalPreview :config="showcasing.config" />
+      </div>
+    </div>
 
     <footer
       class="text-muted-foreground/60 shrink-0 px-4 py-1 text-center text-[11px]"

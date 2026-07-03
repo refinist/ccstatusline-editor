@@ -102,6 +102,10 @@ export interface WidgetOption {
   legacyValue?: string;
   /** Hide the control unless this predicate holds (for conditional options). */
   showIf?: (w: Widget) => boolean;
+  /** Enum only: always render as a dropdown, even when the option count would
+   *  fit a button group — keeps one option family (e.g. the bar "display"
+   *  enums) presented the same way across widgets regardless of count. */
+  select?: boolean;
 }
 
 // ── shared enum sets ───────────────────────────────────────────────────────
@@ -311,7 +315,10 @@ const formatNerd = (
     control: 'enum',
     metaKey: 'format',
     options: formatOptions,
-    defaultValue: defaultFormat
+    defaultValue: defaultFormat,
+    // The format family's counts straddle ENUM_INLINE_MAX (vim 5 / status 4 /
+    // remote 6) — force the dropdown so all three widgets present the same way.
+    select: true
   },
   { id: 'nerdFont', control: 'toggle', metaKey: 'nerdFont', deleteOnOff: true }
 ];
@@ -478,7 +485,8 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       control: 'enum',
       metaKey: 'display',
       options: DISPLAY_CTX_BAR,
-      defaultValue: 'progress-short'
+      defaultValue: 'progress-short',
+      select: true
     }
   ],
   'context-percentage': [
@@ -488,7 +496,8 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       control: 'enum',
       metaKey: 'display',
       options: DISPLAY_CTX_SLIDER,
-      defaultValue: ''
+      defaultValue: '',
+      select: true
     }
   ],
   'context-percentage-usable': [
@@ -498,7 +507,8 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       control: 'enum',
       metaKey: 'display',
       options: DISPLAY_CTX_SLIDER,
-      defaultValue: ''
+      defaultValue: '',
+      select: true
     }
   ],
   'compaction-counter': [

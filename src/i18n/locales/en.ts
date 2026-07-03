@@ -109,6 +109,11 @@ export default {
     rateLimited: 'Sharing too fast — wait a minute and retry',
     unavailable: 'Sharing is temporarily unavailable — try again later'
   },
+  applyCmd: {
+    label: 'Copy command',
+    hint: 'Copies a one-line command — paste it into your terminal to apply this exact config to your machine',
+    copied: 'Command copied — open your terminal and paste it to apply'
+  },
   showcase: {
     label: 'Save image',
     hint: 'Downloads a high-res screenshot and copies it to the clipboard, ready to share wherever you like',
@@ -270,10 +275,10 @@ export default {
     timezone: 'Timezone',
     locale: 'Locale',
     opt: {
-      longBar: 'Long bar',
-      medBar: 'Medium bar',
-      shortBar: 'Short bar',
-      shortBarOnly: 'Short bar only',
+      longBar: 'Long',
+      medBar: 'Medium',
+      shortBar: 'Short',
+      shortBarOnly: 'Short only',
       percent: 'Percent',
       timeText: 'Time',
       number: 'Number',
@@ -553,7 +558,7 @@ export default {
     },
     submitCta: {
       title: 'Share your config',
-      desc: 'Got a status line worth showing off? Submit it and it might end up featured here.',
+      desc: 'Got a status line worth showing off? Submit it and it might end up featured here.😄',
       button: 'Submit'
     },
     moreTemplates: 'More templates'

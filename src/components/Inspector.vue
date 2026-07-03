@@ -219,7 +219,9 @@ function writeMeta(
 // Enum-type options all share control:'enum', with the option count deciding
 // presentation: ≤ENUM_INLINE_MAX renders as a button group (ToggleGroup),
 // more falls back to a dropdown (Select). The rule lives here once so we don't
-// have to pick a control per option.
+// have to pick a control per option. An option can opt out via `select: true`
+// (always a dropdown) to keep its family consistent across widgets — e.g. the
+// bar "display" enums, whose counts straddle the threshold.
 const ENUM_INLINE_MAX = 4;
 // reka-ui's Select/ToggleGroup won't accept an empty-string value, so this
 // sentinel stands in for "default / empty".
@@ -522,7 +524,7 @@ function resetDefaults() {
                   />
                 </Field>
 
-                <!-- enum: ≤ENUM_INLINE_MAX options render as a button group, more falls back to a dropdown (decided uniformly by option count) -->
+                <!-- enum: ≤ENUM_INLINE_MAX options render as a button group, more (or `select: true`) falls back to a dropdown -->
                 <Field
                   v-else-if="o.control === 'enum'"
                   orientation="horizontal"
@@ -531,7 +533,9 @@ function resetDefaults() {
                     {{ t(`wopt.${o.id}`) }}
                   </FieldLabel>
                   <ToggleGroup
-                    v-if="(o.options?.length ?? 0) <= ENUM_INLINE_MAX"
+                    v-if="
+                      !o.select && (o.options?.length ?? 0) <= ENUM_INLINE_MAX
+                    "
                     type="single"
                     variant="outline"
                     size="sm"

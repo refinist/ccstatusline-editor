@@ -3,6 +3,21 @@
   "type": "module",
   "version": "2.2.22-ccse.1",
   "packageManager": "pnpm@11.9.0",
+  "description": "A visual editor for building ccstatusline configurations — drag, drop, preview, ship.",
+  "keywords": [
+    "ccstatusline",
+    "claude-code",
+    "claude",
+    "anthropic",
+    "statusline",
+    "status-line",
+    "visual-editor",
+    "terminal",
+    "powerline",
+    "vue",
+    "vite",
+    "cloudflare-workers"
+  ],
   "engines": {
     "node": "^22.18.0 || >=24.12.0"
   },

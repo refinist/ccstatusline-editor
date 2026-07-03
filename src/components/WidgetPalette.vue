@@ -127,11 +127,16 @@ function selectTab(v: unknown) {
         <InputGroupAddon>
           <Search class="size-3.5" />
         </InputGroupAddon>
+        <!-- Pin one size at every width: the shadcn Input's own `text-base
+             md:text-sm` (16px below md) merged with the old `text-xs` override
+             made the text jump 14px→12px when the viewport crossed md. A plain
+             `text-sm` overrides the base size and matches md:text-sm, so the
+             input reads 14px everywhere and never changes with the screen. -->
         <InputGroupInput
           v-model="query"
           type="text"
           :placeholder="t('palette.search')"
-          class="text-xs"
+          class="text-sm"
         />
         <InputGroupAddon v-if="query" align="inline-end">
           <InputGroupButton

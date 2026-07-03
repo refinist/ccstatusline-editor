@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/logo.png" alt="ccstatusline editor logo" width="300" />
+  <img src="public/logo.png" alt="CCStatusline Editor logo" width="300" />
 </p>
 
-<h1 align="center">ccstatusline editor</h1>
+<h1 align="center">CCStatusline Editor</h1>
 
 <p align="center">
   <strong>English</strong> | <a href="README.zh-CN.md">简体中文</a>

@@ -103,6 +103,11 @@ export default {
     rateLimited: '分享太頻繁，請等一分鐘再試',
     unavailable: '分享服務暫時不可用，請稍後重試'
   },
+  applyCmd: {
+    label: '複製命令',
+    hint: '複製一條命令，在終端機貼上執行即可將目前設定套用到本機',
+    copied: '命令已複製，開啟終端機貼上執行即可套用'
+  },
   showcase: {
     label: '儲存圖片',
     hint: '下載目前預覽的高畫質截圖並複製到剪貼簿，可以分享到任何地方',
@@ -520,7 +525,7 @@ export default {
     },
     submitCta: {
       title: '分享你的設定',
-      desc: '有值得一看的狀態列設定？提交上來，說不定會被收錄展示在這裡。',
+      desc: '有值得一看的狀態列設定？提交上來，說不定會被收錄展示在這裡。😄',
       button: '提交'
     },
     moreTemplates: '更多範本'

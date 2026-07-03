@@ -3,10 +3,13 @@ import {
   BetweenVerticalEnd,
   BetweenVerticalStart,
   Camera,
+  Check,
   Copy,
   GripVertical,
+  LoaderCircle,
   Plus,
   Share2,
+  Terminal,
   Trash2,
   X
 } from '@lucide/vue';
@@ -32,6 +35,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { useDragCursorCenter } from '@/composables/useDragCursorCenter';
+import { buildApplyCommand } from '@/lib/applyCommand';
 import {
   copyPngToClipboard,
   downloadBlob,
@@ -263,6 +267,17 @@ async function onShare() {
   }
 }
 
+// "Copy command": same one-line `npx ccsa` apply command the template cards
+// offer, but for the config currently in the editor. The icon flips to a
+// checkmark briefly, mirroring the template cards' feedback.
+const cmdCopied = ref(false);
+async function onCopyCommand() {
+  await copy(buildApplyCommand(store.config));
+  cmdCopied.value = true;
+  toast.success(t('applyCmd.copied'));
+  setTimeout(() => (cmdCopied.value = false), 1500);
+}
+
 // "Save image": rasterize the config into a PNG, download it AND copy it to
 // the clipboard. The live editor preview (StatusPreview, below) simulates a
 // fixed-column terminal — width-dependent ellipsis, a reserved gray strip for
@@ -279,10 +294,14 @@ async function onShare() {
 // clipboard write, so the whole render chain is packed into a promise handed
 // to the clipboard first and only then awaited for the download.
 const exportPreviewRef = ref<HTMLElement | null>(null);
+const previewRef = ref<InstanceType<typeof StatusPreview> | null>(null);
 const showcasing = ref(false);
 function onShowcase() {
   if (showcasing.value) return;
   showcasing.value = true;
+  // The "photo" is rendered offscreen, so fire the visible card's camera-flash
+  // as the moment-of-capture feedback.
+  previewRef.value?.flash();
   const blobPromise = (async () => {
     await nextTick();
     const el = exportPreviewRef.value;
@@ -313,9 +332,13 @@ function onShowcase() {
          rides each button itself as a hover Tooltip instead of a separate ⓘ
          icon per button, which crowded the row. reka-ui tooltips only open
          from hover/keyboard focus, so on touch they never appear and never
-         swallow the tap — there the buttons' text labels stand on their own. -->
+         swallow the tap — there the buttons' text labels stand on their own.
+         On mobile the column's p-1 leaves only 4px above this row while the
+         section's gap-3 puts 12px below it; mt-2 tops the 4px up to 12px so
+         the row sits evenly. From sm the column's p-4 changes the balance
+         and the spacing reads fine, so the margin is dropped. -->
     <TooltipProvider :delay-duration="300">
-      <div class="flex items-center justify-end gap-1.5">
+      <div class="mt-2 flex items-center justify-end gap-1.5 sm:mt-0">
         <Tooltip>
           <TooltipTrigger as-child>
             <Button
@@ -337,11 +360,30 @@ function onShowcase() {
           <TooltipTrigger as-child>
             <Button
               size="xs"
+              variant="outline"
+              class="text-muted-foreground"
+              :disabled="!hasWidgets"
+              @click="onCopyCommand"
+            >
+              <Check v-if="cmdCopied" class="size-3" />
+              <Terminal v-else class="size-3" />
+              <span>{{ t('applyCmd.label') }}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" class="max-w-60">
+            {{ t('applyCmd.hint') }}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger as-child>
+            <Button
+              size="xs"
               class="border-transparent bg-[#D97757] text-white hover:bg-[#D97757]/90"
               :disabled="!hasWidgets || sharing"
               @click="onShare"
             >
-              <Share2 class="size-3" />
+              <LoaderCircle v-if="sharing" class="size-3 animate-spin" />
+              <Share2 v-else class="size-3" />
               <span>{{ t('share.label') }}</span>
             </Button>
           </TooltipTrigger>
@@ -353,7 +395,7 @@ function onShowcase() {
     </TooltipProvider>
 
     <!-- Live, read-only terminal preview of the rendered status line. -->
-    <StatusPreview />
+    <StatusPreview ref="previewRef" />
 
     <!-- Offscreen showcase capture target — see onShowcase. Only mounted while
          capturing. The outer box clips to nothing so it's invisible on screen.
@@ -556,7 +598,7 @@ function onShowcase() {
         v-if="store.canAddLine"
         type="button"
         variant="outline"
-        class="text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-muted/40 mt-2 w-full cursor-pointer gap-1.5 border-dashed text-xs select-none"
+        class="text-muted-foreground hover:text-foreground hover:border-foreground/30 hover:bg-muted/40 mt-2 h-12 w-full cursor-pointer gap-1.5 border-dashed text-xs select-none"
         @click="store.addLine()"
       >
         <Plus class="size-3.5" />

@@ -102,9 +102,54 @@ watch(lgUp, up => {
   if (up) showInspector.value = false;
 });
 
-// Version number next to the title (static display, mirrors ccstatusline's
-// title "| v…" structure).
+// Version number next to the title (mirrors ccstatusline's title "| v…"
+// structure); links to the upstream repo the version is tracking.
 const version = '2.2.22';
+const CCSTATUSLINE_REPO_URL = 'https://github.com/sirmalloc/ccstatusline';
+
+// ── Title easter egg ─────────────────────────────────────────────────────────
+// Hovering the brand name makes its letters do one happy pogo: each character
+// jumps with its own random delay / height / tilt and a confetti color sampled
+// from the title gradient's palette, then settles back into the flowing
+// gradient. Guarded so a bounce always finishes before the next hover re-arms.
+const TITLE_POGO_COLORS = [
+  '#3f51b1',
+  '#5a55ae',
+  '#7b5fac',
+  '#8f6aae',
+  '#a86aa4',
+  '#cc6b8e',
+  '#f18271',
+  '#f3a469',
+  '#f7c978'
+];
+// 0.6s pogo + up to 0.18s of per-char delay, rounded up a touch.
+const TITLE_POGO_MS = 850;
+const titleChars = computed(() => [...t('app.title')]);
+const titleBouncing = ref(false);
+const titleSeeds = ref<Record<string, string>[]>([]);
+let titleTimer: ReturnType<typeof setTimeout> | undefined;
+function bounceTitle() {
+  if (titleBouncing.value) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  titleSeeds.value = titleChars.value.map(() => ({
+    '--jd': `${(Math.random() * 0.18).toFixed(3)}s`,
+    '--jh': `-${(0.35 + Math.random() * 0.35).toFixed(3)}em`,
+    '--jr': `${(Math.random() * 28 - 14).toFixed(1)}deg`,
+    '--js': (1.05 + Math.random() * 0.4).toFixed(3),
+    '--jc':
+      TITLE_POGO_COLORS[Math.floor(Math.random() * TITLE_POGO_COLORS.length)]!
+  }));
+  titleBouncing.value = true;
+  clearTimeout(titleTimer);
+  titleTimer = setTimeout(() => (titleBouncing.value = false), TITLE_POGO_MS);
+}
+// Greeting hop: one automatic pogo per page load, shortly after mount so the
+// first paint settles before the letters move. After it lands, the title sits
+// still until hovered (bounceTitle's own guard already dedupes overlaps).
+onMounted(() => {
+  setTimeout(bounceTitle, 450);
+});
 
 const showClearConfirm = ref(false);
 
@@ -212,14 +257,37 @@ onMounted(async () => {
           class="mr-2 hidden size-5 shrink-0 sm:block"
         />
         <h1 class="flex min-w-0 items-center text-base tracking-wide">
-          <span class="ccse-gradient-flow truncate font-semibold">
-            {{ t('app.title') }}
+          <!-- Per-char spans exist for the hover pogo (see bounceTitle); the
+               chars are joined tight (no whitespace between spans) so the
+               title reads identically when idle. -->
+          <span
+            class="ccse-gradient-flow truncate font-semibold"
+            :class="titleBouncing ? 'ccse-title-bouncing' : ''"
+            @mouseenter="bounceTitle"
+          >
+            <span
+              v-for="(ch, i) in titleChars"
+              :key="`${i}-${ch}`"
+              class="ccse-title-ch"
+              :class="titleBouncing ? 'ccse-title-ch--pogo' : ''"
+              :style="titleBouncing ? titleSeeds[i] : undefined"
+            >
+              {{ ch }}
+            </span>
           </span>
           <span
             class="text-muted-foreground hidden text-sm font-medium lg:inline"
           >
             <span class="mx-2.5">|</span>
-            v{{ version }}
+            <!-- Deliberately unstyled link (inherits the muted text look):
+                 only the pointer cursor hints it jumps to upstream ccstatusline. -->
+            <a
+              :href="CCSTATUSLINE_REPO_URL"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              v{{ version }}
+            </a>
           </span>
         </h1>
         <!-- Page-level nav hugs the brand area, separate from the toolbar buttons on the right -->
@@ -353,12 +421,18 @@ onMounted(async () => {
                 {{ t('playground.tab') }}
               </span>
             </DropdownMenuItem>
-            <DropdownMenuItem @click="router.push('/help')">
-              <CircleHelp class="size-3.5" />
-              {{ t('nav.help') }}
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <div class="flex items-center gap-1 px-1 py-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="text-muted-foreground shadow-none"
+                :title="t('nav.help')"
+                @click="router.push('/help')"
+              >
+                <CircleHelp class="size-4" />
+                <span class="sr-only">{{ t('nav.help') }}</span>
+              </Button>
               <ThemeToggle />
               <LocaleSwitcher />
             </div>
@@ -386,10 +460,10 @@ onMounted(async () => {
            height. Padding is squeezed to p-1 on mobile: this content is
            width-sensitive (the terminal preview / line editor rely heavily on
            character alignment), so every pixel saved here genuinely fits more
-           characters. Restored to p-4 from sm, once this middle column is no
-           longer the only full-width area and there's no need to pinch it. -->
+           characters. Restored to p-3 from sm on up, once this middle column is
+           no longer the only full-width area and there's no need to pinch it. -->
       <div
-        class="flex w-full min-w-0 shrink-0 grow flex-col p-1 pb-0 sm:flex-1 sm:overflow-hidden sm:p-4 sm:pb-0 lg:p-6 lg:pb-0"
+        class="flex w-full min-w-0 shrink-0 grow flex-col p-1 pb-0 sm:flex-1 sm:overflow-hidden sm:p-3 sm:pb-0"
       >
         <LineEditor />
         <!-- Copyright only spans the middle column (not the full page), so the

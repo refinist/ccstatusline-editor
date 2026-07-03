@@ -1,0 +1,547 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Disable the mobile browser's double-tap-to-zoom gesture (two-finger pinch-zoom is
+   preserved, so accessibility zoom is unaffected): otherwise a quick double-tap on a
+   palette widget is often swallowed by the system as a zoom gesture, and the dblclick
+   event never reaches the page. This also removes the ~300ms tap delay on single clicks
+   as a side effect. */
+html {
+  touch-action: manipulation;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --warning: oklch(0.62 0.16 65);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --warning: oklch(0.82 0.16 82);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #app {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  /* Default cursor: pointer for all clickable buttons / menu items / tabs (except disabled state) */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='menuitem'],
+  [role='menuitemcheckbox'],
+  [role='menuitemradio'],
+  [role='option'],
+  [role='tab'],
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* ============ Gradient text: recreate ccstatusline's ink-gradient 'retro' preset + left-to-right flow ============
+   Source: src/tui/App.tsx → <Gradient name='retro'>CCStatusline Configuration</Gradient>
+   The 'retro' preset distributes 9 color stops evenly along the text and interpolates RGB
+   per character; on the web we reproduce the "indigo → purple → pink → orange-red → peach"
+   look with linear-gradient (omitting percentages gives evenly-spaced stops) +
+   background-clip:text.
+   The first color stop (#3f51b1) is appended again at the end so the start and end match,
+   combined with background-size:200% — animating the background image (2x width) by one
+   period lands exactly back on the start position, giving a seamless loop; continuously
+   panning the background image to the right makes the color appear to flow left to right.
+   Adjust the 4s duration to change speed, and -200%↔200% to change direction.
+   The heading (an inline <span> that naturally shrinks to text width) and the empty-state
+   hint (<p>) share this class. */
+.ccse-gradient-flow {
+  /* oklch interpolation: the default sRGB interpolation produces abrupt lightness/chroma
+     jumps across the indigo → pink → orange-red segments, which reads visually as
+     "jumping" rather than "flowing"; oklch is a perceptually uniform space, so the
+     interpolation is smoother. */
+  background-image: linear-gradient(
+    90deg in oklch,
+    #3f51b1,
+    #5a55ae,
+    #7b5fac,
+    #8f6aae,
+    #a86aa4,
+    #cc6b8e,
+    #f18271,
+    #f3a469,
+    #f7c978,
+    #3f51b1
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: ccse-gradient-flow 4s linear infinite;
+}
+@keyframes ccse-gradient-flow {
+  to {
+    background-position: -200% center;
+  }
+}
+/* Respect the system's "prefers-reduced-motion" setting: stop the animation but keep the static gradient */
+@media (prefers-reduced-motion: reduce) {
+  .ccse-gradient-flow {
+    animation: none;
+  }
+}
+
+/* ============ Rainbow shimmer text: recreate the Claude Code CLI "effort: max" badge ============
+   Measured by frame-sampling a reference screen recording: one full hue cycle takes
+   about 0.7s (not a guessed 2.2s), with the color band continuously panning in the same
+   direction. Compared to the heading's retro gradient (which only covers the warm half
+   of the wheel: indigo → purple → pink → orange-red → peach), this one is more saturated
+   and spans the full hue range (red, orange, yellow, green, cyan, blue, purple all
+   covered), giving a livelier look. Reuses the same background-clip:text +
+   background-position panning-loop mechanism, just with a different, full-spectrum set
+   of color stops. */
+.ccse-rainbow-flow {
+  background-image: linear-gradient(
+    90deg in oklch,
+    #f43f5e,
+    #f97316,
+    #eab308,
+    #22c55e,
+    #06b6d4,
+    #3b82f6,
+    #a855f7,
+    #ec4899,
+    #f43f5e
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: ccse-gradient-flow 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-rainbow-flow {
+    animation: none;
+  }
+}
+
+/* Sync the icon's color cycling: an SVG stroke color (currentColor) can't be colored via
+   background-clip:text, so instead we use hue-rotate to spin the seed color through a
+   full turn of the hue wheel; the duration matches the text's 0.8s so the two read as
+   the same rainbow flowing together. */
+.ccse-rainbow-icon {
+  color: #f43f5e;
+  animation: ccse-rainbow-hue 0.8s linear infinite;
+}
+@keyframes ccse-rainbow-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-rainbow-icon {
+    animation: none;
+  }
+}
+
+/* ============ Line selected state: flowing gradient border (recreates the heading's retro gradient, applied only to the border) ============
+   Goal: the currently active line's border should run the same "indigo → purple → pink →
+   orange-red → peach" flowing gradient as the heading, appearing only on the border ring
+   without bleeding into the interior.
+
+   Approach: two background layers clipped separately via background-clip (no absolutely
+   positioned pseudo-element, so it isn't clipped by .ccse-zone-line's overflow-x:auto,
+   and it naturally follows the rounded-md corners and border-box):
+     - Top layer, padding-box: the opaque app background color, which covers the gradient
+       layer beneath it so the interior still reads as transparent (in the unselected
+       state, --background shows through, so the selected state's interior matches it
+       exactly with no extra fill color).
+     - Bottom layer, border-box: the retro flowing gradient, visible only on the border
+       ring (the area the padding-box doesn't cover).
+   The border color is set to transparent so the gradient ring shows through; the
+   animation reuses the heading's ccse-gradient-flow (the background-position pan only
+   affects the 200%-wide bottom gradient layer — the top layer's solid fill is
+   unaffected). */
+.ccse-line-active {
+  border-width: 2px;
+  border-color: transparent;
+  background:
+    linear-gradient(var(--background), var(--background)) padding-box,
+    linear-gradient(
+        90deg in oklch,
+        #3f51b1,
+        #5a55ae,
+        #7b5fac,
+        #8f6aae,
+        #a86aa4,
+        #cc6b8e,
+        #f18271,
+        #f3a469,
+        #f7c978,
+        #3f51b1
+      )
+      border-box;
+  background-size:
+    auto,
+    200% auto;
+  animation: ccse-gradient-flow 4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-line-active {
+    animation: none;
+  }
+}
+
+/* The selection data stays unchanged during a drag, but the selected ring is temporarily
+   hidden visually. This overrides .ccse-item-active that may persist on the Sortable
+   fallback clone / ghost (the template's own isDragging branch has no control over DOM
+   nodes cloned by Sortable). */
+body.ccse-grabbing .ccse-item-active {
+  outline-color: transparent !important;
+}
+
+/* ============ Drag: the two forms of a palette widget ============
+   Palette item structure:
+   - .ccse-palette-label   name + category tag (shown only at rest)
+   - .ccse-palette-preview colored ANSI preview (always shown; also the final form while dragging)
+
+   Three DOM roles (sortable clone + forceFallback):
+   - The floating ghost that follows the cursor: class .ccse-dragging, attached to body
+   - The placeholder left in place: cloneEl (no special class) / the dragEl still in the
+     palette, which keeps the full chip
+   - The temporary placeholder dropped into a line: dragEl moved into the .ccse-zone-line
+     container.
+     Note: on a cross-list drag, SortableJS applies the *target* list's ghost-class to
+     dragEl, so here it's .ccse-line-ghost rather than the palette's own .ccse-ghost.
+     Because of that we can't match on the ghost-class; instead we detect
+     ".ccse-palette-item appearing inside .ccse-zone-line" (the resting in-line widget is
+     a <span>, and the floating ghost is attached to body, so neither is misidentified).
+
+   Unified drag-state appearance: hide .ccse-palette-label, strip the outer chrome, and
+   keep only the colored preview — that is the final UI form.
+*/
+
+/* (A) Floating ghost → pure ANSI final form; !important overrides the inline width/height that sortable writes */
+.ccse-dragging .ccse-palette-label {
+  display: none !important;
+}
+.ccse-dragging.ccse-palette-item {
+  width: max-content !important;
+  height: auto !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* (B) Temporary in-line placeholder → real UI element (colored preview), semi-transparent to distinguish it from a real widget */
+.ccse-zone-line .ccse-palette-item .ccse-palette-label {
+  display: none !important;
+}
+.ccse-zone-line .ccse-palette-item {
+  width: max-content !important;
+  height: auto !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  opacity: 0.4 !important;
+}
+
+/* ============ Drag: reordering an existing widget within a line → real UI element ============ */
+/* Floating ghost → pure ANSI final form (follows the cursor, shows the text) */
+.ccse-line-drag {
+  width: max-content !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+/* Temporary in-line placeholder → real UI element, semi-transparent to make the drop target distinguishable */
+.ccse-line-ghost {
+  opacity: 0.4 !important;
+}
+
+/* While a widget is being dropped onto a given line, hide the "drop widgets here" hint only for *that* line; other lines are unaffected */
+.ccse-line-wrap:has(.ccse-zone-line .ccse-palette-item) .ccse-drophint,
+.ccse-line-wrap:has(.ccse-zone-line .ccse-line-ghost) .ccse-drophint {
+  display: none !important;
+}
+
+/* ============ Drag: whole-row reordering (triggered by the grip handle) ============ */
+/* Drop-target placeholder: dashed highlight, indicating "will be inserted here" */
+.ccse-row-ghost {
+  opacity: 0.5;
+  outline: 2px dashed var(--ring);
+  outline-offset: -2px;
+  border-radius: 0.5rem;
+}
+/* The floating row that follows the cursor: lifted slightly */
+.ccse-row-drag {
+  background: var(--card);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+
+/* Show a "grabbing" cursor for the whole duration of the drag, restored only on release */
+body.ccse-grabbing,
+body.ccse-grabbing * {
+  cursor: grabbing !important;
+}
+
+/* The "full width - 40" reserved zone in the preview terminal: hatching + fading to indicate this width is unavailable (reserved for Claude's auto-compact hint) */
+.ccse-reserved {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    var(--border) 3px,
+    var(--border) 4px
+  );
+  opacity: 0.6;
+}
+
+/* When a preview-terminal line's content exceeds the available width and gets hard-cut,
+   fade the right edge and add an ellipsis to indicate "truncated here".
+   Note: a real terminal wraps on overflow instead — this ellipsis is just a friendly cue
+   in the preview and is not actual ccstatusline behavior. */
+.ccse-ellipsis {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.15em 0 1.6em;
+  color: var(--muted-foreground);
+  background: linear-gradient(90deg, transparent, var(--muted) 55%);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Preview terminal input area: the prompt symbol sits on the left, and the input box aligns with the status line below it. */
+.ccse-terminal-frame {
+  --ccse-terminal-prompt-gutter: 1.75ch;
+}
+/* Input box mimics Claude Code: thin cyan lines above and below, with a tag straddling the top edge in the upper right. */
+.ccse-terminal-input {
+  --ccse-terminal-accent: #0a91b3;
+  border-top: 1px solid var(--ccse-terminal-accent);
+  border-bottom: 1px solid var(--ccse-terminal-accent);
+}
+.ccse-terminal-input-tag {
+  position: absolute;
+  top: 0;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  background: var(--ccse-terminal-accent);
+  /* Tag text uses the terminal's own background color, giving a "cutout" look against the cyan fill (each theme follows its own background) */
+  color: #f7f8fa;
+  user-select: none;
+  pointer-events: none;
+}
+.dark .ccse-terminal-input-tag {
+  color: #23272f;
+}
+.ccse-terminal-prompt-mark {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--foreground);
+  font-weight: 700;
+}
+.ccse-terminal-cursor {
+  position: absolute;
+  left: var(--ccse-terminal-prompt-gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 1.15em;
+  background: var(--foreground);
+  animation: ccse-terminal-cursor-blink 1s steps(1, end) infinite;
+}
+.ccse-terminal-output-line {
+  padding-left: var(--ccse-terminal-prompt-gutter);
+}
+@keyframes ccse-terminal-cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-terminal-cursor {
+    animation: none;
+  }
+}
+
+/* Drag handle on the right edge of the preview terminal: fades in on hover, drag freely to resize the simulated terminal width */
+.ccse-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  transition: opacity 0.15s;
+  z-index: 5;
+}
+.ccse-resize-handle::before {
+  content: '';
+  width: 3px;
+  height: 22px;
+  border-radius: 9999px;
+  background: var(--muted-foreground);
+  opacity: 0.55;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
+}
+.ccse-resize-handle:hover::before,
+.ccse-resize-handle--active::before {
+  background: var(--primary);
+  opacity: 1;
+}
+
+/* Transition when double-clicking the edge to snap to full width: mimics the easing feel of Chrome's double-click-to-maximize window-edge snap */
+.ccse-term-snap {
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-term-snap {
+    transition: none;
+  }
+}
+
+/* Preview-terminal width / context-usage slider: thin track + theme-colored thumb */
+.ccse-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--border);
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.ccse-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: var(--primary);
+  border: none;
+}
+.ccse-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--primary);
+}
+
+/* The block characters used for progress bars/sliders (█░▒▓│) fill the entire character
+   cell, so their visual center sits higher than baseline text; nudging them down slightly
+   optically centers them so the bar appears on the same line as the surrounding text. */
+.ccse-bar {
+  display: inline-block;
+  position: relative;
+  top: -0.08em;
+}
+
+/* The row container remains scrollable on horizontal overflow, but the scrollbar itself is hidden (no layout space, not shown) */
+.ccse-zone-line,
+.ccse-noscrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+}
+.ccse-zone-line::-webkit-scrollbar,
+.ccse-noscrollbar::-webkit-scrollbar {
+  display: none; /* WebKit: Chrome / Safari */
+}

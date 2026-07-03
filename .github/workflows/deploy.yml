@@ -1,0 +1,52 @@
+name: Deploy
+
+# Deploys track the `prod` branch, not main: main is the everyday trunk
+# (gated by ci.yml), and releasing = fast-forwarding prod to main
+# (`git checkout prod && git merge --ff-only main && git push`). The
+# build/lint/test steps below still run before the deploy step as a last
+# line of defense, so a bad prod push can't ship.
+on:
+  push:
+    branches:
+      - prod
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (includes type check)
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      # Not `pnpm deploy` (a pnpm built-in that would shadow any script) and
+      # not `worker:deploy` (which would rebuild — the Build step above
+      # already produced dist/): just upload what was built and verified.
+      - name: Deploy to Cloudflare Workers
+        run: pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

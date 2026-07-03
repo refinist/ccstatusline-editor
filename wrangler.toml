@@ -20,5 +20,5 @@ run_worker_first = ["/api/*"]
 # `pnpm exec wrangler kv namespace create SHARES --preview` id as `preview_id`) below.
 [[kv_namespaces]]
 binding = "SHARES"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-# preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+id = "3c5b7e59b635426c996c1bc64af28083"
+preview_id = "e083dcc57b7640a080755f2a0d34686b"

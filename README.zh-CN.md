@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/logo.png" alt="ccstatusline editor logo" width="120" />
+  <img src="public/logo.png" alt="ccstatusline editor logo" width="300" />
 </p>
 
 <h1 align="center">ccstatusline editor</h1>

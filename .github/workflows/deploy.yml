@@ -1,14 +1,14 @@
 name: Deploy
 
-# Deploys track the `prod` branch, not main: main is the everyday trunk
-# (gated by ci.yml), and releasing = fast-forwarding prod to main
-# (`git checkout prod && git merge --ff-only main && git push`). The
-# build/lint/test steps below still run before the deploy step as a last
-# line of defense, so a bad prod push can't ship.
+# Deploys are cut from version tags, not branches: main is the everyday trunk
+# (gated by ci.yml), and releasing = `pnpm release` (bumpp), which bumps
+# package.json, commits, tags vX.Y.Z-ccse.N and pushes — the pushed tag lands
+# here. The build/lint/test steps below still run before the deploy step as a
+# last line of defense, so a bad tag can't ship.
 on:
   push:
-    branches:
-      - prod
+    tags:
+      - 'v*'
 
 concurrency:
   group: deploy-production

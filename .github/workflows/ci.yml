@@ -1,8 +1,8 @@
 name: CI
 
 # Gate for the main trunk: direct pushes and PRs both run the full check
-# suite. Deploys are NOT tied to main — pushing (merging) main into the
-# `prod` branch is what triggers deploy.yml.
+# suite. Deploys are NOT tied to main — pushing a `v*` version tag (via
+# `pnpm release` / bumpp) is what triggers deploy.yml.
 on:
   push:
     branches:

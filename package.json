@@ -18,7 +18,8 @@
     "build": "run-p typecheck \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "release": "bumpp --preid ccse"
   },
   "dependencies": {
     "@lucide/vue": "^1.22.0",
@@ -48,6 +49,7 @@
     "@types/uuid": "^11.0.0",
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/tsconfig": "^0.9.1",
+    "bumpp": "^11.1.0",
     "eslint": "^10.6.0",
     "npm-run-all2": "^9.0.2",
     "prettier": "^3.9.4",

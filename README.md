@@ -26,34 +26,39 @@ This is a browser-based editor for [ccstatusline](https://github.com/sirmalloc/c
 - **Point-and-click widgets** — git status, model, context usage, quota countdowns, custom text, and more, all configured through the UI.
 - **Templates** — ready-made status lines you can apply in one click, then tweak.
 - **Share links** — send a link that reopens the editor with your exact config loaded.
-- **Round-trip editing** — apply a config from the editor via the companion `ccsa` CLI, pull it back later with `ccsa export`, and keep refining.
+- **Round-trip editing** — apply a config from the editor via the companion `@refinist/ccsa` CLI, pull it back later with `@refinist/ccsa export`, and keep refining.
 - **i18n** — English, 简体中文, 繁體中文.
 
 ## Getting started
 
 ```bash
 pnpm install
-pnpm dev            # frontend dev server (http://localhost:5173)
+# frontend dev server (http://localhost:5173)
+pnpm dev
 ```
 
 The share feature (`/api/share`) is backed by a Cloudflare Worker + KV. To exercise it locally, also run:
 
 ```bash
-pnpm worker:dev      # Worker + local KV emulation (http://localhost:8787)
+# Worker + local KV emulation (http://localhost:8787)
+pnpm worker:dev
 ```
 
 `pnpm dev` proxies `/api/*` to `:8787`, so running both together gives you frontend hot-reload with a working share flow.
 
 ```bash
-pnpm build          # type-check + production build
-pnpm lint           # eslint
-pnpm test           # vitest
+# type-check + production build
+pnpm build
+# eslint
+pnpm lint
+# vitest
+pnpm test
 ```
 
 ## Related projects
 
 - [sirmalloc/ccstatusline](https://github.com/sirmalloc/ccstatusline) — the status line renderer this editor targets.
-- [refinist/ccstatusline-apply](https://github.com/refinist/ccstatusline-apply) — `ccsa`, the companion CLI that writes a config generated here to `~/.config/ccstatusline/settings.json` on your machine.
+- [refinist/ccstatusline-apply](https://github.com/refinist/ccstatusline-apply) — `@refinist/ccsa`, the companion CLI that writes a config generated here to `~/.config/ccstatusline/settings.json` on your machine.
 
 ## License
 

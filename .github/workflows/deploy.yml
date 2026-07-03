@@ -14,14 +14,20 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+# contents: write (bumped from read) so the changelog step below can
+# create/update the GitHub Release for the pushed tag.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 — changelogithub needs the full tag history to diff
+      # the pushed tag against the previous one.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v6
 
@@ -29,6 +35,11 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+
+      - name: Generate GitHub Changelog
+        run: pnpx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

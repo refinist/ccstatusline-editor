@@ -580,7 +580,7 @@ export default {
         share:
           'Share links that reopen the editor with your exact config loaded.',
         roundtrip:
-          'Round-trip editing: apply a config from the editor, pull it back later with "ccsa export", and keep refining.'
+          'Round-trip editing: apply a config from the editor, pull it back later with "{\'@\'}refinist/ccsa export", and keep refining.'
       }
     },
     workflow: {
@@ -591,7 +591,7 @@ export default {
         'Paste it into your terminal — the CLI backs up and writes the config. The status line refreshes on its own, no restart needed.'
     },
     cli: {
-      title: 'ccsa — the bridge from browser to disk',
+      title: "{'@'}refinist/ccsa — the bridge from browser to disk",
       desc: "A web page can't write files on your machine, so the companion CLI does it: it takes the config the editor generated and writes it to ~/.config/ccstatusline/settings.json, safely.",
       cmdApply:
         'Apply a config (raw JSON or base64; -f <file> and --stdin also work). "apply" is the default command, so the word may be omitted.',

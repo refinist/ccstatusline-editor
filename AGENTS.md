@@ -15,7 +15,6 @@
 - `src/templates/` — preset templates.
 - The companion `ccsa` CLI lives in its own repository (refinist/ccstatusline-apply); this repo only references it as command strings (`npx -y ccsa@latest …`). When the CLI's behavior changes, update the copy here (help center, playground, templates) to match.
 - `worker/` — Cloudflare Worker entry.
-- `CONFIG_REFERENCE.md` — the authoritative reference for the config format; read it before changing any config-related logic.
 
 ## UI Component Conventions
 

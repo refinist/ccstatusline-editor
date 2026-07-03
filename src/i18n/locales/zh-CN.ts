@@ -545,7 +545,7 @@ export default {
         templates: '内置模板一键套用，再按需微调。',
         share: '分享链接可以让对方在编辑器中直接打开你的完整配置。',
         roundtrip:
-          '双向编辑：从编辑器应用配置后，之后可以用 "ccsa export" 取回来继续调整。'
+          '双向编辑：从编辑器应用配置后，之后可以用 "{\'@\'}refinist/ccsa export" 取回来继续调整。'
       }
     },
     workflow: {
@@ -556,7 +556,7 @@ export default {
         '粘贴到终端执行——CLI 会先备份再写入配置，状态栏自动刷新，无需重启。'
     },
     cli: {
-      title: 'ccsa——从浏览器到本地磁盘的桥梁',
+      title: "{'@'}refinist/ccsa——从浏览器到本地磁盘的桥梁",
       desc: '网页无法直接写你机器上的文件，这个配套 CLI 负责这一步：把编辑器生成的配置安全地写入 ~/.config/ccstatusline/settings.json。',
       cmdApply:
         '应用配置（原始 JSON 或 base64，也支持 -f <文件> 和 --stdin）。apply 是默认命令，这个词可以省略。',

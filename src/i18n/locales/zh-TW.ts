@@ -545,7 +545,7 @@ export default {
         templates: '內建範本一鍵套用，再按需微調。',
         share: '分享連結可以讓對方在編輯器中直接開啟你的完整配置。',
         roundtrip:
-          '雙向編輯：從編輯器套用配置後，之後可以用 "ccsa export" 取回來繼續調整。'
+          '雙向編輯：從編輯器套用配置後，之後可以用 "{\'@\'}refinist/ccsa export" 取回來繼續調整。'
       }
     },
     workflow: {
@@ -556,7 +556,7 @@ export default {
         '貼上到終端機執行——CLI 會先備份再寫入配置，狀態列自動重新整理，無需重新啟動。'
     },
     cli: {
-      title: 'ccsa——從瀏覽器到本機磁碟的橋樑',
+      title: "{'@'}refinist/ccsa——從瀏覽器到本機磁碟的橋樑",
       desc: '網頁無法直接寫你機器上的檔案，這個配套 CLI 負責這一步：把編輯器產生的配置安全地寫入 ~/.config/ccstatusline/settings.json。',
       cmdApply:
         '套用配置（原始 JSON 或 base64，也支援 -f <檔案> 和 --stdin）。apply 是預設命令，這個詞可以省略。',

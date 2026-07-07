@@ -1,7 +1,7 @@
 {
   "name": "ccstatusline-editor",
   "type": "module",
-  "version": "2.2.22-ccse.3",
+  "version": "2.2.22-ccse.4",
   "packageManager": "pnpm@11.9.0",
   "description": "A visual editor for building ccstatusline configurations — drag, drop, preview, ship.",
   "keywords": [

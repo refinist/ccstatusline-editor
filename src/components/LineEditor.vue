@@ -45,7 +45,7 @@ import {
 import { buildShortShareUrl, createShortShare } from '@/lib/shareConfig';
 import { renderWidget } from '@/preview/renderers';
 import { useConfigStore } from '@/stores/config';
-import type { Widget } from '@/widgets';
+import { WIDGET_BY_TYPE, type Widget } from '@/widgets';
 
 const store = useConfigStore();
 const { t } = useI18n();
@@ -81,9 +81,46 @@ function normalize(line: Widget[]): {
   return { widgets, newId };
 }
 
+// Mirror of addWidget's auto-separator editor preference for the drag-in path
+// (palette drops land via onUpdate and bypass addWidget entirely): a freshly
+// dropped widget gets a separator slipped between it and its neighbour —
+// before it normally, after it when it landed at the head of the line, never
+// next to an existing separator. Same guards as the store: powerline /
+// defaultSeparator are mutually exclusive with manual separators.
+function slipAutoSeparator(line: Widget[], newId: string): Widget[] {
+  if (
+    !store.autoSeparator ||
+    store.config.powerline.enabled ||
+    store.config.defaultSeparator
+  )
+    return line;
+  const idx = line.findIndex(w => w.id === newId);
+  const dropped = line[idx];
+  if (!dropped || dropped.type === 'separator') return line;
+  const prev = line[idx - 1];
+  const next = line[idx + 1];
+  const at =
+    prev && prev.type !== 'separator'
+      ? idx
+      : !prev && next && next.type !== 'separator'
+        ? idx + 1
+        : null;
+  if (at === null) return line;
+  const sepMeta = WIDGET_BY_TYPE.get('separator');
+  const sep: Widget = {
+    id: uuid(),
+    type: 'separator',
+    ...(sepMeta?.defaults || {})
+  };
+  const copy = [...line];
+  copy.splice(at, 0, sep);
+  return copy;
+}
+
 function onUpdate(i: number, list: Widget[]) {
   const { widgets, newId } = normalize(list);
-  const next = store.config.lines.map((l, idx) => (idx === i ? widgets : l));
+  const line = newId ? slipAutoSeparator(widgets, newId) : widgets;
+  const next = store.config.lines.map((l, idx) => (idx === i ? line : l));
   store.setLines(next);
   // A widget freshly cloned in from the palette lands here with no id; once it
   // gets one, select it so the Inspector opens on it immediately.

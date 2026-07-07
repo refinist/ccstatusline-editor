@@ -36,6 +36,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { guardNumberInput, scrubNumberInput } from '@/lib/numberInput';
 import { useConfigStore } from '@/stores/config';
 import {
   optionsFor,
@@ -374,7 +375,7 @@ function resetDefaults() {
               <p class="text-muted-foreground text-xs leading-relaxed">
                 {{ t('inspector.resetDefaultsConfirm') }}
               </p>
-              <div class="flex justify-end gap-2">
+              <div class="flex justify-end gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
@@ -614,6 +615,8 @@ function resetDefaults() {
                         :placeholder="
                           o.placeholderKey ? t(o.placeholderKey) : ''
                         "
+                        @beforeinput="guardNumberInput($event, o.max)"
+                        @input="scrubNumberInput($event, o.max)"
                       />
                       <NumberFieldIncrement class="p-1.5" />
                     </NumberFieldContent>

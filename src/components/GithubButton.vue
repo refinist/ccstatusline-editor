@@ -13,7 +13,7 @@ const REPO_URL = 'https://github.com/refinist/ccstatusline-editor';
     rel="noopener noreferrer"
     variant="ghost"
     size="sm"
-    class="text-muted-foreground h-8 gap-1.5 px-3 shadow-none"
+    class="text-muted-foreground h-8 w-7 px-0 shadow-none sm:w-8"
     title="GitHub"
   >
     <GithubIcon class="size-3.5" />

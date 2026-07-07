@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useElementSize } from '@vueuse/core';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import TerminalFrame from '@/components/TerminalFrame.vue';
@@ -27,6 +28,32 @@ const MIN_USABLE = 24;
 const termWidth = ref<number | null>(null);
 const simCtxPct = ref(40); // simulated context usage % (drives full-until-compact)
 
+// Below this floor, the space actually available for the card (the scroll
+// wrapper's own width — see wrapperRef) is too cramped to preview against:
+// most configs would truncate immediately, and on touch the drag handle below
+// is unreachable anyway (it only reveals on :hover). So once available space
+// drops under ~100 columns, default the card to a fixed width instead of
+// auto-shrinking to fit, and let it scroll horizontally into view. One rule
+// covers both a narrow phone and a merely cramped desktop window/column.
+const MIN_TERMINAL_WIDTH = 750;
+const wrapperRef = ref<HTMLElement>();
+const { width: wrapperWidth } = useElementSize(wrapperRef);
+const narrow = computed(
+  () => wrapperWidth.value > 0 && wrapperWidth.value < MIN_TERMINAL_WIDTH
+);
+const cardWidthPx = computed(
+  () => termWidth.value ?? (narrow.value ? MIN_TERMINAL_WIDTH : null)
+);
+// What "auto" (termWidth === null) currently resolves to, in concrete pixels:
+// the wrapper's own width normally, or the fixed floor once narrow. Dragging's
+// ceiling and double-click's target must use this — not the wrapper's width
+// directly — or in the narrow state (card already wider than the wrapper) the
+// first pointer move would clamp the card down to the wrapper width, and the
+// forced MIN_TERMINAL_WIDTH default would be unreachable from then on.
+const autoWidth = computed(() =>
+  narrow.value ? MIN_TERMINAL_WIDTH : wrapperWidth.value
+);
+
 const flexMode = computed(() => store.config.flexMode || 'full-minus-40');
 const isUntilCompact = computed(() => flexMode.value === 'full-until-compact');
 const compacted = computed(
@@ -52,8 +79,8 @@ const resizing = ref(false);
 const snapping = ref(false);
 function maximizeWidth() {
   const el = termRef.value;
-  if (!el?.parentElement) return;
-  const maxW = el.parentElement.clientWidth;
+  if (!el) return;
+  const maxW = autoWidth.value;
   const startW = el.offsetWidth;
   if (termWidth.value === null || startW >= maxW - 0.5) return; // already at max width; skip the animation
   termWidth.value = startW; // pin the current pixel width first, as the transition's starting point
@@ -72,10 +99,12 @@ function maximizeWidth() {
 function startResize(e: PointerEvent) {
   e.preventDefault();
   const el = termRef.value;
-  if (!el?.parentElement) return;
+  if (!el) return;
   const startX = e.clientX;
   const startW = el.offsetWidth;
-  const maxW = el.parentElement.clientWidth;
+  // Math.max(…, startW): the card may legitimately start wider than autoWidth
+  // mid-transition edge cases; never clamp below where the drag began.
+  const maxW = Math.max(autoWidth.value, startW);
   resizing.value = true;
   document.body.style.userSelect = 'none';
   document.body.style.cursor = 'col-resize';
@@ -109,81 +138,89 @@ defineExpose({ flash });
 </script>
 
 <template>
-  <!-- Terminal-style preview surface — background is pinned to fixed hexes (not the
-       theme's muted-gray token) so it reads as a real terminal in both modes. -->
-  <div
-    ref="termRef"
-    class="group border-border relative max-w-full shrink-0 overflow-hidden rounded-lg border bg-(--ccse-terminal-bg)"
-    :class="snapping ? 'ccse-term-snap' : ''"
-    :style="termWidth != null ? { width: `${termWidth}px` } : undefined"
-  >
-    <div class="border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
-      <span class="flex gap-2">
-        <span class="size-3 rounded-full bg-[#ff5f57]" />
-        <span class="size-3 rounded-full bg-[#febc2e]" />
-        <span class="size-3 rounded-full bg-[#28c840]" />
-      </span>
-    </div>
-
-    <TerminalFrame
-      :config="store.config"
-      show-input
-      overflow-mode
-      :reserved="reserved"
-      :usable-width="usableWidth"
-      :reserve-width="RESERVE"
-      :min-usable="MIN_USABLE"
-      :empty-text="t('editor.previewEmpty')"
-      :reserved-hint="t('preview.reservedHint')"
-    />
-
-    <!-- Terminal width is now adjusted by dragging the preview's right edge; this only
-         keeps the context-usage % that flex mode actually depends on. -->
+  <!-- Horizontal-scroll viewport: only engages once the card is forced wider
+       than the space actually available (see MIN_TERMINAL_WIDTH above) —
+       scoped to just this preview so panning it never scrolls the whole page. -->
+  <div ref="wrapperRef" class="ccse-noscrollbar overflow-x-auto">
+    <!-- Terminal-style preview surface — background is pinned to fixed hexes (not the
+         theme's muted-gray token) so it reads as a real terminal in both modes. -->
     <div
-      v-if="isUntilCompact"
-      class="border-border flex flex-col gap-1.5 border-t px-3.5 py-2"
+      ref="termRef"
+      class="group border-border relative shrink-0 overflow-hidden rounded-lg border bg-(--ccse-terminal-bg)"
+      :class="[snapping ? 'ccse-term-snap' : '', narrow ? '' : 'max-w-full']"
+      :style="cardWidthPx != null ? { width: `${cardWidthPx}px` } : undefined"
     >
-      <label
-        class="text-muted-foreground flex items-center gap-2.5 text-[11px]"
+      <div
+        class="border-border flex items-center gap-2.5 border-b px-3.5 py-2.5"
       >
-        <span class="w-12 shrink-0">{{ t('preview.context') }}</span>
-        <input
-          v-model.number="simCtxPct"
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          class="ccse-range flex-1"
-        />
-        <span class="w-16 shrink-0 text-right font-mono tabular-nums">
-          {{ simCtxPct }}%
+        <span class="flex gap-2">
+          <span class="size-3 rounded-full bg-[#ff5f57]" />
+          <span class="size-3 rounded-full bg-[#febc2e]" />
+          <span class="size-3 rounded-full bg-[#28c840]" />
         </span>
-      </label>
-      <p class="text-muted-foreground/70 text-[10px] leading-tight">
-        {{ t('preview.thresholdNote', { n: store.config.compactThreshold }) }} ·
-        {{ compacted ? t('preview.stateCompacted') : t('preview.stateFull') }}
-      </p>
+      </div>
+
+      <TerminalFrame
+        :config="store.config"
+        show-input
+        overflow-mode
+        :reserved="reserved"
+        :usable-width="usableWidth"
+        :reserve-width="RESERVE"
+        :min-usable="MIN_USABLE"
+        :empty-text="t('editor.previewEmpty')"
+        :reserved-hint="t('preview.reservedHint')"
+      />
+
+      <!-- Terminal width is now adjusted by dragging the preview's right edge; this only
+           keeps the context-usage % that flex mode actually depends on. -->
+      <div
+        v-if="isUntilCompact"
+        class="border-border flex flex-col gap-1.5 border-t px-3.5 py-2"
+      >
+        <label
+          class="text-muted-foreground flex items-center gap-2.5 text-[11px]"
+        >
+          <span class="w-12 shrink-0">{{ t('preview.context') }}</span>
+          <input
+            v-model.number="simCtxPct"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            class="ccse-range flex-1"
+          />
+          <span class="w-16 shrink-0 text-right font-mono tabular-nums">
+            {{ simCtxPct }}%
+          </span>
+        </label>
+        <p class="text-muted-foreground/70 text-[10px] leading-tight">
+          {{ t('preview.thresholdNote', { n: store.config.compactThreshold }) }}
+          ·
+          {{ compacted ? t('preview.stateCompacted') : t('preview.stateFull') }}
+        </p>
+      </div>
+
+      <!-- Drag handle: pinned to the terminal card's far right edge, fades in on hover, drag freely to resize. -->
+      <div
+        class="ccse-resize-handle"
+        :class="
+          resizing
+            ? 'ccse-resize-handle--active opacity-100'
+            : 'opacity-0 group-hover:opacity-100'
+        "
+        @pointerdown="startResize"
+        @dblclick="maximizeWidth"
+      />
+
+      <!-- Camera-flash overlay for "Save image" — sits above everything in the
+           card (the resize handle is z-5) and never intercepts clicks. -->
+      <div
+        v-if="flashing"
+        class="ccse-term-flash pointer-events-none absolute inset-0 z-10"
+        aria-hidden="true"
+        @animationend="flashing = false"
+      />
     </div>
-
-    <!-- Drag handle: pinned to the terminal card's far right edge, fades in on hover, drag freely to resize. -->
-    <div
-      class="ccse-resize-handle"
-      :class="
-        resizing
-          ? 'ccse-resize-handle--active opacity-100'
-          : 'opacity-0 group-hover:opacity-100'
-      "
-      @pointerdown="startResize"
-      @dblclick="maximizeWidth"
-    />
-
-    <!-- Camera-flash overlay for "Save image" — sits above everything in the
-         card (the resize handle is z-5) and never intercepts clicks. -->
-    <div
-      v-if="flashing"
-      class="ccse-term-flash pointer-events-none absolute inset-0 z-10"
-      aria-hidden="true"
-      @animationend="flashing = false"
-    />
   </div>
 </template>

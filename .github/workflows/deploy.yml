@@ -36,8 +36,13 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
+      # --no-prerelease: every tag here carries a `-ccse.N` semver prerelease
+      # identifier by design (see the `release` script), so changelogithub's
+      # own semver check would otherwise flag every single release as a
+      # GitHub "Pre-release" forever. These are still real, final releases —
+      # the suffix is just our own build counter, not a semver prerelease.
       - name: Generate GitHub Changelog
-        run: pnpx changelogithub
+        run: pnpx changelogithub --no-prerelease
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

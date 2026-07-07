@@ -526,9 +526,91 @@ export default {
     copied: 'Copied'
   },
   nav: {
+    menu: 'Menu',
     templates: 'Templates',
     editor: 'Editor',
+    rotation: 'Rotation',
+    new: 'New',
     help: 'Help'
+  },
+  rotation: {
+    period: 'Switch every',
+    period_hour: 'Hour',
+    period_day: 'Day',
+    period_week: 'Week',
+    period_weeklyPreset: 'Weekly plan',
+    period_custom: 'Custom',
+    customEvery: 'every',
+    unit_minute: 'minutes',
+    unit_hour: 'hours',
+    unit_day: 'days',
+    strategy: 'Strategy',
+    strategy_cycle: 'Cycle',
+    strategy_random: 'Random',
+    defaultName: 'Theme',
+    nameLabel: 'Theme name',
+    nameDuplicate: 'A theme named "{name}" already exists — pick another name',
+    added: 'Added "{name}" to the rotation pool',
+    emptyPool: 'The pool is empty — add your first theme:',
+    needOneMore: 'Rotation needs at least two themes — add one more:',
+    poolFull: 'The pool holds at most {n} themes — remove some first',
+    addCurrent: 'From the editor',
+    addCurrentHint: "Saves the editor's current config as a theme",
+    addImport: 'From JSON',
+    addTemplate: 'From a template',
+    importAdd: 'Add to pool',
+    dayFillBtn: 'Fill this day',
+    dayFilled: 'Updated the look for {day}',
+    dayImportTitle: 'Import JSON · {day}',
+    editInEditor: 'Open this theme in the editor',
+    editBtn: 'Edit',
+    liveEditing: 'Editing rotation theme:',
+    closeEditor: 'Back to rotation',
+    remove: 'Remove',
+    removeConfirm: 'Remove "{name}" from the pool?',
+    clearPool: 'Clear pool',
+    clearConfirmTitle: 'Clear the rotation pool?',
+    clearConfirmDesc: "This removes all {n} themes and can't be undone.",
+    exportTitle: 'Use in Terminal',
+    exportNeedTwo: 'Add at least 2 themes to enable rotation',
+    exportStep1: 'Download the rotation bundle',
+    download: 'Download {file}',
+    exportStep2: 'Run it in your terminal',
+    exportStep2Desc:
+      'Adjust the path if the file landed somewhere other than ~/Downloads. The command saves your current config, registers the schedule, and applies the current theme right away.',
+    inlineAlt: 'Or as a single command, no file needed:',
+    offNote:
+      'Turn rotation off anytime — this unregisters the schedule and restores the config you had before:',
+    copyCommand: 'Copy',
+    commandCopied: 'Command copied — paste it into your terminal',
+    importBundle: 'Import a rotation bundle',
+    importBundleDesc:
+      'Restore a whole rotation from a downloaded bundle file — replaces the current period, strategy, and themes.',
+    importBundleLocalTip:
+      'Rotation already on in your terminal? Its live bundle imports too:',
+    bundleInvalid: "This isn't a valid rotation bundle file",
+    bundleImported: 'Imported {n} themes from the bundle',
+    bundleImportedTruncated:
+      'Imported {n} themes; dropped {dropped} over the {max}-theme limit',
+    bundleReplaceTitle: 'Replace the current pool?',
+    bundleReplaceDesc:
+      "This overwrites the current period, strategy, and all themes with the file's contents, and can't be undone.",
+    weeklyLoaded:
+      'Weekly plan ready — seven day cards, Sunday through Saturday. Edit each one to style that day.',
+    weeklyReplaceTitle: 'Switch to the weekly plan?',
+    weeklyReplaceDesc:
+      "This replaces the current period, strategy, and all themes with seven editor-default cards, one per weekday (Sunday through Saturday), and can't be undone. Style each day afterwards.",
+    weeklyLeaveTitle: 'Leave the weekly plan?',
+    weeklyLeaveConfirm: 'Clear and switch',
+    weeklyLeaveDesc:
+      "The weekly plan and the ordinary periods are mutually exclusive, so switching clears its seven weekday cards. This can't be undone.",
+    weeklyDay0: 'Sun',
+    weeklyDay1: 'Mon',
+    weeklyDay2: 'Tue',
+    weeklyDay3: 'Wed',
+    weeklyDay4: 'Thu',
+    weeklyDay5: 'Fri',
+    weeklyDay6: 'Sat'
   },
   templates: {
     subtitle:
@@ -615,6 +697,26 @@ export default {
           'Symlinked configs (stow / chezmoi dotfiles) are written through the link instead of replacing it.'
       }
     },
+    rotation: {
+      title: 'Theme rotation — a fresh look on a schedule',
+      desc: 'Collect a pool of status-line themes and let the CLI switch between them automatically. Open it from the "Rotation" tab in the editor header, then export the pool to your terminal.',
+      modes: {
+        schedule:
+          'Set how often the look changes — every hour, day, or week, or a custom "every N minutes / hours / days".',
+        strategy:
+          'Pick the order: "Cycle" walks the pool top to bottom on repeat; "Random" picks one each time. Card order is the cycle order — drag to rearrange.',
+        weekly:
+          'Or use the Weekly plan: seven cards, one per weekday (Sunday through Saturday), each styled on its own — the status line wears "that day\'s" look every week.',
+        edit: "Every theme is a full config: edit it in the built-in editor with live preview, save the editor's current config as a theme, import JSON, or start from a template. Up to 20 themes."
+      },
+      cmdTitle: 'Turning it on and off',
+      cmdOn:
+        'Start rotating from a downloaded bundle. It saves your current config, registers the schedule, and applies the current theme right away. Grab this command — and the bundle file — from "Use in Terminal" on the rotation page.',
+      cmdOff:
+        'Stop rotating — unregisters the schedule and restores the config you had before it started.',
+      entry:
+        'Already rotating on this machine? "Import a rotation bundle" reads the live bundle back from ~/.config/ccsa/rotation.json, so you can tweak it and re-export.'
+    },
     pitfalls: {
       title: 'Pitfalls from real-world use',
       subtitle:
@@ -622,6 +724,8 @@ export default {
       fnm: {
         title:
           'fnm / nvm users: a globally installed ccstatusline breaks when the Node version changes',
+        intro:
+          'ccstatusline runs two ways: "npx -y ccstatusline{\'@\'}latest" (no install, re-resolved on every status-line refresh) or a global install ("npm i -g ccstatusline"). This record is about the global-install setup — the faster one, and the one that fnm / nvm trip up.',
         symptomLabel: 'Symptom:',
         symptom:
           'The status line works in some projects but goes blank in projects that use a different Node version.',

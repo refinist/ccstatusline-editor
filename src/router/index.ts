@@ -16,6 +16,11 @@ export const router = createRouter({
       component: () => import('@/pages/TemplatesPage.vue')
     },
     {
+      path: '/rotation',
+      name: 'rotation',
+      component: () => import('@/pages/RotationPage.vue')
+    },
+    {
       path: '/help',
       name: 'help',
       component: () => import('@/pages/HelpPage.vue')

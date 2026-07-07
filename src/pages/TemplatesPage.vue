@@ -166,10 +166,12 @@ function confirmApply(tpl: Template) {
           class="border-border bg-card relative mb-5 flex break-inside-avoid flex-col gap-3 rounded-lg border p-4"
         >
           <div>
-            <!-- flex-wrap: on narrow screens the three labelled buttons don't fit
+            <!-- flex-wrap: on narrow screens the four labelled buttons don't fit
                  next to the title, so the whole button group drops to a second
                  row (ml-auto keeps it right-aligned there) instead of the title
-                 truncating away. -->
+                 truncating away. The group itself also wraps (below), so on the
+                 narrowest cards the buttons stack onto extra rows rather than
+                 overflowing the card edge. -->
             <div
               class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2"
             >
@@ -191,7 +193,9 @@ function confirmApply(tpl: Template) {
               </div>
 
               <!-- Same style as the clone/delete buttons in the editor's Inspector panel: outline stroke, size-3.5 icons -->
-              <div class="ml-auto flex shrink-0 items-center gap-1">
+              <div
+                class="ml-auto flex flex-wrap items-center justify-end gap-1.5"
+              >
                 <Popover
                   :open="applyTarget === tpl.id"
                   @update:open="applyTarget = $event ? tpl.id : null"

@@ -1,30 +1,29 @@
 <script setup lang="ts">
 import {
-  Blocks,
   Braces,
   CircleHelp,
   Ellipsis,
   LayoutTemplate,
+  Menu,
   Redo2,
+  Repeat,
   RotateCcw,
   Settings2,
-  SlidersHorizontal,
   TerminalSquare,
   Trash2,
   Undo2
 } from '@lucide/vue';
-import { useEventListener, useMediaQuery } from '@vueuse/core';
+import { useMediaQuery } from '@vueuse/core';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import Drawer from '@/components/Drawer.vue';
+import EditorWorkspace from '@/components/EditorWorkspace.vue';
 import GithubButton from '@/components/GithubButton.vue';
 import GlobalSettings from '@/components/GlobalSettings.vue';
-import Inspector from '@/components/Inspector.vue';
 import JsonPanel from '@/components/JsonPanel.vue';
-import LineEditor from '@/components/LineEditor.vue';
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue';
 import PlaygroundPanel from '@/components/PlaygroundPanel.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
@@ -41,7 +40,6 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover';
-import WidgetPalette from '@/components/WidgetPalette.vue';
 import { resolveSharedConfig } from '@/lib/shareConfig';
 import { useConfigStore } from '@/stores/config';
 import { usePendingTemplateStore } from '@/stores/pendingTemplate';
@@ -67,39 +65,20 @@ function confirmRestoreDefaults() {
   showRestoreConfirm.value = false;
 }
 
-// On wide screens the Inspector is a fixed right column (<aside> below). On narrow
-// screens that column would eat too much vertical space when stacked, so it collapses
-// into a right-edge floating button that opens the Inspector in its own drawer.
-const showInspector = ref(false);
-
-// Same treatment, mirrored, for the widget palette: on ≥sm it's a fixed left
-// column, but on phones a permanent panel would eat ~45% of the viewport before
-// showing the thing you're actually editing. Below sm it collapses into a
-// left-edge floating button + drawer — cross-boundary drag-and-drop into the
-// editor behind a modal drawer doesn't work anyway, so the drawer leans on the
-// existing double-click-to-add-to-active-line path instead (see editor.tips.dblclick).
-const showPalette = ref(false);
-
-// These two drawers only exist because their fixed column is hidden below a
-// breakpoint (palette < sm, inspector < lg). If the viewport grows past that
-// breakpoint while the drawer is open — rotating the phone, resizing the
-// window — the column comes back and the drawer would duplicate it, so close
-// it. The other drawers (global settings / JSON / playground) are drawers at
-// every width and are left alone.
-// The header "more" dropdown has the same problem: its trigger is sm:hidden,
-// so past sm the open menu would float over the full toolbar with no way to
-// reopen (or sensibly interact with) it.
+// Both the brand-side nav dropdown and the "more" dropdown have sm:hidden
+// triggers, so past sm an open menu would float over the full toolbar with no
+// way to reopen (or sensibly interact with) it — its content lives in a portal
+// that outlives the trigger being hidden. Close them when the viewport grows
+// past the breakpoint. (The palette/inspector drawers get the same treatment
+// inside EditorWorkspace.)
+const showNavMenu = ref(false);
 const showMoreMenu = ref(false);
 const smUp = useMediaQuery('(min-width: 640px)');
-const lgUp = useMediaQuery('(min-width: 1024px)');
 watch(smUp, up => {
   if (up) {
-    showPalette.value = false;
+    showNavMenu.value = false;
     showMoreMenu.value = false;
   }
-});
-watch(lgUp, up => {
-  if (up) showInspector.value = false;
 });
 
 // Version number next to the title (mirrors ccstatusline's title "| v…"
@@ -109,40 +88,69 @@ const CCSTATUSLINE_REPO_URL = 'https://github.com/sirmalloc/ccstatusline';
 
 // ── Title easter egg ─────────────────────────────────────────────────────────
 // Hovering the brand name makes its letters do one happy pogo: each character
-// jumps with its own random delay / height / tilt and a confetti color sampled
-// from the title gradient's palette, then settles back into the flowing
-// gradient. Guarded so a bounce always finishes before the next hover re-arms.
-const TITLE_POGO_COLORS = [
-  '#3f51b1',
-  '#5a55ae',
-  '#7b5fac',
-  '#8f6aae',
-  '#a86aa4',
-  '#cc6b8e',
-  '#f18271',
-  '#f3a469',
-  '#f7c978'
-];
+// jumps with its own random delay / height / tilt while keeping the exact
+// gradient color it's showing — each char gets its own copy of the gradient,
+// pixel-aligned to where the (paused, see .ccse-title-bouncing) flow sits, so
+// the color band rides along through the hop. Guarded so a bounce always
+// finishes before the next hover re-arms.
 // 0.6s pogo + up to 0.18s of per-char delay, rounded up a touch.
 const TITLE_POGO_MS = 850;
 const titleChars = computed(() => [...t('app.title')]);
+const titleEl = ref<HTMLElement | null>(null);
 const titleBouncing = ref(false);
 const titleSeeds = ref<Record<string, string>[]>([]);
 let titleTimer: ReturnType<typeof setTimeout> | undefined;
+// The logo's follow-up act: right as the letters land, the brand icon does a
+// jelly squash-and-stretch (see .ccse-logo-pop). Timer runs a touch past the
+// 0.95s animation so the class comes off after it finishes.
+const LOGO_POP_MS = 1000;
+const logoPopping = ref(false);
+let logoTimer: ReturnType<typeof setTimeout> | undefined;
 function bounceTitle() {
   if (titleBouncing.value) return;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  titleSeeds.value = titleChars.value.map(() => ({
+  // Sample where the flowing gradient sits right now (it freezes there for the
+  // whole bounce): background-size is 200% of the span, and the 0% → -200%
+  // background-position sweep works out to the image sliding right by one full
+  // bgWidth per cycle. Each char then anchors its own gradient copy so that
+  // char-local px 0 lines up with the parent image at its offsetLeft.
+  const el = titleEl.value;
+  let bgWidth = 0;
+  let flowOffset = 0;
+  let charLefts: number[] = [];
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    bgWidth = rect.width * 2;
+    const flow = el
+      .getAnimations()
+      .find(
+        (a): a is CSSAnimation =>
+          a instanceof CSSAnimation && a.animationName === 'ccse-gradient-flow'
+      );
+    const duration = Number(flow?.effect?.getComputedTiming().duration);
+    const elapsed = Number(flow?.currentTime ?? 0);
+    if (duration > 0) flowOffset = ((elapsed % duration) / duration) * bgWidth;
+    charLefts = Array.from(
+      el.children,
+      c => c.getBoundingClientRect().left - rect.left
+    );
+  }
+  titleSeeds.value = titleChars.value.map((_, i) => ({
     '--jd': `${(Math.random() * 0.18).toFixed(3)}s`,
     '--jh': `-${(0.35 + Math.random() * 0.35).toFixed(3)}em`,
     '--jr': `${(Math.random() * 28 - 14).toFixed(1)}deg`,
     '--js': (1.05 + Math.random() * 0.4).toFixed(3),
-    '--jc':
-      TITLE_POGO_COLORS[Math.floor(Math.random() * TITLE_POGO_COLORS.length)]!
+    '--jbs': `${bgWidth.toFixed(1)}px`,
+    '--jbp': `${(flowOffset - (charLefts[i] ?? 0)).toFixed(1)}px`
   }));
   titleBouncing.value = true;
   clearTimeout(titleTimer);
-  titleTimer = setTimeout(() => (titleBouncing.value = false), TITLE_POGO_MS);
+  titleTimer = setTimeout(() => {
+    titleBouncing.value = false;
+    logoPopping.value = true;
+    clearTimeout(logoTimer);
+    logoTimer = setTimeout(() => (logoPopping.value = false), LOGO_POP_MS);
+  }, TITLE_POGO_MS);
 }
 // Greeting hop: one automatic pogo per page load, shortly after mount so the
 // first paint settles before the letters move. After it lands, the title sits
@@ -163,54 +171,6 @@ function onReset() {
 function confirmClear() {
   store.reset();
 }
-
-function isTypingTarget(el: EventTarget | null): boolean {
-  const node = el as HTMLElement | null;
-  if (!node) return false;
-  return (
-    node.tagName === 'INPUT' ||
-    node.tagName === 'TEXTAREA' ||
-    node.isContentEditable
-  );
-}
-
-// Keyboard shortcuts (never intercepted while typing in an input):
-//   · Delete / Backspace — delete the currently selected widget
-//   · ⌘/Ctrl+Z undo, ⌘/Ctrl+Shift+Z or Ctrl+Y redo
-useEventListener(window, 'keydown', (e: KeyboardEvent) => {
-  if (isTypingTarget(e.target)) return;
-
-  // Shortcuts while a widget is selected (no modifier keys):
-  //   · Delete / Backspace — delete it
-  //   · ← / → — move to the previous / next widget (in order, across lines)
-  if (store.selectedId && !e.metaKey && !e.ctrlKey && !e.altKey) {
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-      e.preventDefault();
-      store.removeWidgetById(store.selectedId);
-      return;
-    }
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      store.selectAdjacent(-1);
-      return;
-    }
-    if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      store.selectAdjacent(1);
-      return;
-    }
-  }
-
-  if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
-  const key = e.key.toLowerCase();
-  if (key === 'z' && !e.shiftKey) {
-    e.preventDefault();
-    if (store.canUndo) store.undo();
-  } else if ((key === 'z' && e.shiftKey) || key === 'y') {
-    e.preventDefault();
-    if (store.canRedo) store.redo();
-  }
-});
 
 // Two paths for loading a config, checked in order once on entering the editor:
 //   1. Template page "use this template" — the config is relayed once through
@@ -248,19 +208,21 @@ onMounted(async () => {
     class="bg-background text-foreground mx-auto flex h-full w-full max-w-[1920px] flex-col"
   >
     <header
-      class="border-border bg-card flex h-11 shrink-0 items-center justify-between gap-2 border-b px-4"
+      class="border-border bg-card flex h-11 shrink-0 items-center justify-between gap-2 border-b px-2.5 sm:px-4"
     >
       <div class="flex min-w-0 items-center">
         <img
           src="/logo.png"
           alt=""
           class="mr-2 hidden size-5 shrink-0 sm:block"
+          :class="logoPopping ? 'ccse-logo-pop' : ''"
         />
         <h1 class="flex min-w-0 items-center text-base tracking-wide">
           <!-- Per-char spans exist for the hover pogo (see bounceTitle); the
                chars are joined tight (no whitespace between spans) so the
                title reads identically when idle. -->
           <span
+            ref="titleEl"
             class="ccse-gradient-flow truncate font-semibold"
             :class="titleBouncing ? 'ccse-title-bouncing' : ''"
             @mouseenter="bounceTitle"
@@ -278,7 +240,13 @@ onMounted(async () => {
           <span
             class="text-muted-foreground hidden text-sm font-medium lg:inline"
           >
-            <span class="mx-2.5">|</span>
+            <!-- Same divider as the header toolbar (bg-border h-4 w-px) instead
+                 of a literal "|" glyph — matches its height and color. inline-block
+                 + align-middle since this sits in an inline text run, not a flex row. -->
+            <span
+              class="bg-border mx-2.5 inline-block h-4 w-px align-middle"
+              aria-hidden="true"
+            />
             <!-- Deliberately unstyled link (inherits the muted text look):
                  only the pointer cursor hints it jumps to upstream ccstatusline. -->
             <a
@@ -290,33 +258,75 @@ onMounted(async () => {
             </a>
           </span>
         </h1>
-        <!-- Page-level nav hugs the brand area, separate from the toolbar buttons on the right -->
-        <span
-          class="text-muted-foreground/50 mx-2.5 hidden text-sm select-none lg:inline"
-        >
-          ·
-        </span>
+        <!-- Page-level nav hugs the brand area, separate from the toolbar
+             buttons on the right; a muted · splits the two sibling links -->
         <RouterLink
           to="/templates"
-          class="ml-2.5 flex shrink-0 items-center gap-1.5 text-sm font-medium text-[#D97757] transition-opacity hover:opacity-80 lg:ml-0"
+          class="ml-2.5 hidden shrink-0 items-center gap-1.5 text-sm font-medium text-[#D97757] transition-opacity hover:opacity-80 sm:flex lg:ml-5"
         >
           <LayoutTemplate class="size-3.5" />
           <span class="hidden lg:inline">{{ t('nav.templates') }}</span>
         </RouterLink>
-        <RouterLink
-          to="/help"
-          class="ml-2.5 hidden shrink-0 items-center gap-1.5 text-sm font-medium text-[#D97757] transition-opacity hover:opacity-80 sm:flex"
+        <span
+          class="text-muted-foreground/50 mx-2.5 hidden text-sm select-none sm:inline"
         >
-          <CircleHelp class="size-3.5" />
-          <span class="hidden lg:inline">{{ t('nav.help') }}</span>
+          ·
+        </span>
+        <RouterLink
+          to="/rotation"
+          class="relative hidden shrink-0 items-center gap-1.5 text-sm font-medium text-[#D97757] transition-opacity hover:opacity-80 sm:flex"
+        >
+          <Repeat class="size-3.5" />
+          <span class="hidden lg:inline">{{ t('nav.rotation') }}</span>
+          <!-- Superscript "New" tag riding the link's top-right corner. Custom
+               animated badge (.ccse-new-badge): flowing gradient + breathing
+               halo + a periodic sheen sweep, so it actually catches the eye. -->
+          <!-- <span
+            class="ccse-new-badge absolute -top-2 right-3 hidden h-3.5 items-center rounded px-1 text-[8px] leading-none font-bold tracking-wider text-white uppercase lg:inline-flex"
+          >
+            {{ t('nav.new') }}
+          </span> -->
         </RouterLink>
+        <!-- <sm: the two nav links collapse into a single dropdown so the
+             brand row stays uncluttered on phones -->
+        <DropdownMenu v-model:open="showNavMenu">
+          <DropdownMenuTrigger as-child>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="ml-1 h-8 w-7 px-0 text-[#D97757] hover:text-[#D97757] sm:hidden"
+              :title="t('nav.menu')"
+            >
+              <Menu class="size-4" />
+              <span class="sr-only">{{ t('nav.menu') }}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" class="min-w-[160px]">
+            <DropdownMenuItem @click="router.push('/templates')">
+              <LayoutTemplate class="size-3.5" />
+              {{ t('nav.templates') }}
+            </DropdownMenuItem>
+            <DropdownMenuItem @click="router.push('/rotation')">
+              <Repeat class="size-3.5" />
+              {{ t('nav.rotation') }}
+              <!-- <span
+                class="ccse-new-badge ml-auto inline-flex h-4 items-center rounded px-1.5 text-[9px] leading-none font-bold tracking-wider text-white uppercase"
+              >
+                {{ t('nav.new') }}
+              </span> -->
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <div class="flex shrink-0 items-center gap-1">
+      <!-- Mobile squeezes every fixed-width element (w-7/gap-0.5) so the
+           truncating title keeps as much room as possible; ≥sm restores the
+           roomier spacing. -->
+      <div class="flex shrink-0 items-center gap-0.5 sm:gap-1">
         <!-- High-frequency edit actions: icon-only (self-explanatory) + title tooltip -->
         <Button
           variant="ghost"
           size="sm"
-          class="text-muted-foreground h-8 w-8 px-0"
+          class="text-muted-foreground h-8 w-7 px-0 sm:w-8"
           :title="t('app.undo')"
           :disabled="!store.canUndo"
           @click="store.undo()"
@@ -327,7 +337,7 @@ onMounted(async () => {
         <Button
           variant="ghost"
           size="sm"
-          class="text-muted-foreground h-8 w-8 px-0"
+          class="text-muted-foreground h-8 w-7 px-0 sm:w-8"
           :title="t('app.redo')"
           :disabled="!store.canRedo"
           @click="store.redo()"
@@ -349,7 +359,7 @@ onMounted(async () => {
           <span class="sr-only">{{ t('app.clear') }}</span>
         </Button>
         <GithubButton class="sm:hidden" />
-        <div class="bg-border mx-1 h-4 w-px" />
+        <div class="bg-border mx-0.5 h-4 w-px sm:mx-1" />
 
         <!-- ≥sm: full toolbar. Below sm, these secondary actions would crowd
              out the title, so they collapse into the "more" menu below, shown
@@ -377,14 +387,34 @@ onMounted(async () => {
             variant="ghost"
             size="sm"
             class="text-muted-foreground h-8 text-sm"
+            :disabled="!hasWidgets"
             @click="showPlayground = true"
           >
-            <TerminalSquare class="ccse-rainbow-icon size-3.5" />
-            <span class="ccse-rainbow-flow hidden font-semibold lg:inline">
+            <TerminalSquare
+              class="size-3.5"
+              :class="hasWidgets ? 'ccse-rainbow-icon' : ''"
+            />
+            <span
+              class="hidden font-semibold lg:inline"
+              :class="hasWidgets ? 'ccse-rainbow-flow' : ''"
+            >
               {{ t('playground.tab') }}
             </span>
           </Button>
           <div class="bg-border mx-1 h-4 w-px" />
+          <!-- Help is a meta entry, so it lives with GitHub/theme/locale
+               instead of the content nav next to the brand (same slot it
+               already occupies in the <sm "more" menu's footer row). -->
+          <Button
+            variant="ghost"
+            size="sm"
+            class="text-muted-foreground h-8 w-8 px-0"
+            :title="t('nav.help')"
+            @click="router.push('/help')"
+          >
+            <CircleHelp class="size-3.5" />
+            <span class="sr-only">{{ t('nav.help') }}</span>
+          </Button>
           <GithubButton />
           <ThemeToggle />
           <LocaleSwitcher />
@@ -395,7 +425,7 @@ onMounted(async () => {
             <Button
               variant="ghost"
               size="sm"
-              class="text-muted-foreground h-8 w-8 px-0 sm:hidden"
+              class="text-muted-foreground h-8 w-7 px-0 sm:hidden"
               :title="t('app.more')"
             >
               <Ellipsis class="size-3.5" />
@@ -415,9 +445,18 @@ onMounted(async () => {
               <Braces class="size-3.5" />
               {{ t('json.tab') }}
             </DropdownMenuItem>
-            <DropdownMenuItem @click="showPlayground = true">
-              <TerminalSquare class="ccse-rainbow-icon size-3.5" />
-              <span class="ccse-rainbow-flow font-semibold">
+            <DropdownMenuItem
+              :disabled="!hasWidgets"
+              @click="showPlayground = true"
+            >
+              <TerminalSquare
+                class="size-3.5"
+                :class="hasWidgets ? 'ccse-rainbow-icon' : ''"
+              />
+              <span
+                class="font-semibold"
+                :class="hasWidgets ? 'ccse-rainbow-flow' : ''"
+              >
                 {{ t('playground.tab') }}
               </span>
             </DropdownMenuItem>
@@ -440,32 +479,12 @@ onMounted(async () => {
         </DropdownMenu>
       </div>
     </header>
-    <!-- Responsive layout, three tiers:
-         · <sm  (phone portrait): palette collapses into a left-edge floating drawer;
-           editor fills the screen; <main> scrolls as a whole.
-         · sm–lg (phone landscape / tablet): palette becomes a fixed left column, sitting
-           side-by-side with the editor; the Inspector still rides its right-edge drawer.
-         · lg+  (desktop): the Inspector becomes a third fixed column (<aside> below).
-         So the palette column appears at `sm`; the Inspector column appears at `lg`. -->
-    <main
-      class="flex flex-1 flex-col overflow-y-auto sm:flex-row sm:overflow-hidden"
-    >
-      <aside
-        class="border-border bg-card hidden min-h-0 shrink-0 sm:flex sm:w-[220px] sm:flex-col sm:border-r"
-      >
-        <WidgetPalette />
-      </aside>
-      <!-- The column's bottom padding is stripped (pb-0); the copyright row's own
-           py-1 supplies the 4px gap, matching the template page's footer line
-           height. Padding is squeezed to p-1 on mobile: this content is
-           width-sensitive (the terminal preview / line editor rely heavily on
-           character alignment), so every pixel saved here genuinely fits more
-           characters. Restored to p-3 from sm on up, once this middle column is
-           no longer the only full-width area and there's no need to pinch it. -->
-      <div
-        class="flex w-full min-w-0 shrink-0 grow flex-col p-1 pb-0 sm:flex-1 sm:overflow-hidden sm:p-3 sm:pb-0"
-      >
-        <LineEditor />
+
+    <!-- The actual editor (palette / line editor / inspector + their
+         narrow-screen drawers) lives in EditorWorkspace, shared with the
+         rotation page's slide-over editing panel. -->
+    <EditorWorkspace>
+      <template #footer>
         <!-- Copyright only spans the middle column (not the full page), so the
              side panels can reach all the way to the bottom of the screen.
              mt-auto pins it to the bottom on mobile, where LineEditor doesn't
@@ -476,65 +495,8 @@ onMounted(async () => {
         >
           {{ t('global.copyright') }}
         </div>
-      </div>
-      <aside
-        class="border-border bg-card hidden shrink-0 lg:block lg:w-[330px] lg:overflow-hidden lg:border-l"
-      >
-        <Inspector />
-      </aside>
-    </main>
-
-    <!-- Bottom-right floating stack: both panels that collapse into a drawer on
-         narrow screens share one corner instead of each hugging its own viewport
-         edge — palette on top (its own column takes over at sm), inspector below
-         (its column takes over at lg), so at most one of the two is ever missing. -->
-    <div class="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-3">
-      <!-- Cross-boundary drag-and-drop doesn't reach the editor behind a modal
-           drawer, so adding a widget from here relies on double-click / the
-           per-item + button → active line instead. -->
-      <button
-        type="button"
-        class="border-border bg-card text-muted-foreground hover:text-foreground flex size-11 items-center justify-center rounded-full border shadow-lg transition-colors sm:hidden"
-        :aria-label="t('palette.title')"
-        :title="t('palette.title')"
-        @click="showPalette = true"
-      >
-        <Blocks class="size-5" />
-      </button>
-      <!-- The dot flags that a widget is currently selected (i.e. there's stuff to edit). -->
-      <button
-        type="button"
-        class="border-border bg-card text-muted-foreground hover:text-foreground relative flex size-11 items-center justify-center rounded-full border shadow-lg transition-colors lg:hidden"
-        :aria-label="t('inspector.tab')"
-        :title="t('inspector.tab')"
-        @click="showInspector = true"
-      >
-        <SlidersHorizontal class="size-5" />
-        <span
-          v-if="store.selectedId"
-          class="bg-primary ring-card absolute top-1 right-1 size-2 rounded-full ring-2"
-        />
-      </button>
-    </div>
-    <Drawer
-      v-model:open="showPalette"
-      :title="t('palette.title')"
-      body-class="overflow-hidden"
-    >
-      <!-- Close on add: the editor sits behind this modal drawer, so collapsing
-           it right away shows the freshly added widget. -->
-      <WidgetPalette @added="showPalette = false" />
-    </Drawer>
-    <!-- Like the global-settings drawer, the mask stays transparent so the
-         terminal preview remains visible while tweaking widget properties. -->
-    <Drawer
-      v-model:open="showInspector"
-      :title="t('inspector.tab')"
-      body-class="overflow-hidden"
-      :masked="false"
-    >
-      <Inspector />
-    </Drawer>
+      </template>
+    </EditorWorkspace>
 
     <!-- Header-button drawers: each opens an independent right-side slide-over. -->
     <Drawer
@@ -558,7 +520,7 @@ onMounted(async () => {
             <p class="text-muted-foreground text-xs leading-relaxed">
               {{ t('global.guard.restoreDefaults') }}
             </p>
-            <div class="flex justify-end gap-2">
+            <div class="flex justify-end gap-1.5">
               <Button
                 variant="outline"
                 size="sm"

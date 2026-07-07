@@ -493,9 +493,89 @@ export default {
     copied: '已复制'
   },
   nav: {
+    menu: '菜单',
     templates: '模板',
     editor: '编辑器',
+    rotation: '主题轮换',
+    new: 'New',
     help: '帮助'
+  },
+  rotation: {
+    period: '切换周期',
+    period_hour: '每小时',
+    period_day: '每天',
+    period_week: '每周',
+    period_weeklyPreset: '一周固定搭配',
+    period_custom: '自定义',
+    customEvery: '每',
+    unit_minute: '分钟',
+    unit_hour: '小时',
+    unit_day: '天',
+    strategy: '轮换策略',
+    strategy_cycle: '顺序循环',
+    strategy_random: '随机',
+    defaultName: '主题',
+    nameLabel: '主题名称',
+    nameDuplicate: '已存在同名主题「{name}」，请换一个名称',
+    added: '已把「{name}」加入轮换池',
+    emptyPool: '池子还是空的——先添加第一套主题：',
+    needOneMore: '至少要两套主题才能轮换——再添加一套吧：',
+    poolFull: '轮换池最多 {n} 套主题——先移除一些再添加吧',
+    addCurrent: '从编辑器添加',
+    addCurrentHint: '把编辑器里当前的配置存为一套主题',
+    addImport: '从 JSON 导入',
+    addTemplate: '从模板添加',
+    importAdd: '加入池子',
+    dayFillBtn: '填入这天',
+    dayFilled: '已更新「{day}」的配置',
+    dayImportTitle: '从 JSON 导入 · {day}',
+    editInEditor: '在编辑器中打开这套主题',
+    editBtn: '继续编辑',
+    liveEditing: '正在编辑轮换主题：',
+    closeEditor: '返回轮换页',
+    remove: '移除',
+    removeConfirm: '把「{name}」从池子里移除？',
+    clearPool: '清空池子',
+    clearConfirmTitle: '清空轮换池？',
+    clearConfirmDesc: '这会移除全部 {n} 套主题，且无法撤销。',
+    exportTitle: '在终端使用',
+    exportNeedTwo: '至少需要 2 套主题才能启用轮换',
+    exportStep1: '下载轮换包',
+    download: '下载 {file}',
+    exportStep2: '在终端运行命令',
+    exportStep2Desc:
+      '如果文件没存在 ~/Downloads，请相应调整路径。这条命令会保存你当前的配置、注册定时任务，并立刻应用当前时段的主题。',
+    inlineAlt: '也可以用单行命令，不需要文件：',
+    offNote: '随时可以关闭轮换——这条命令会注销定时任务并恢复你之前的配置：',
+    copyCommand: '复制',
+    commandCopied: '命令已复制——粘贴到终端运行即可',
+    importBundle: '导入轮换包',
+    importBundleDesc:
+      '从下载的轮换包文件恢复整份轮换配置——会替换当前的时段、策略和所有主题。',
+    importBundleLocalTip: '已在终端开启轮换？本机正在生效的这份也能直接导入：',
+    bundleInvalid: '这不是一个有效的轮换包文件',
+    bundleImported: '已从轮换包导入 {n} 个主题',
+    bundleImportedTruncated:
+      '已导入 {n} 个主题；超出 {max} 个上限的 {dropped} 个已丢弃',
+    bundleReplaceTitle: '替换当前池子？',
+    bundleReplaceDesc:
+      '将用文件内容覆盖当前的时段、策略和所有主题，且无法撤销。',
+    weeklyLoaded:
+      '一周固定搭配已就绪——周日到周六共七张卡，逐一编辑成你想要的样子吧',
+    weeklyReplaceTitle: '切换为一周固定搭配？',
+    weeklyReplaceDesc:
+      '将用 7 张编辑器默认配置的卡片（周日到周六，每天一张）替换当前的时段、策略和所有主题，且无法撤销。之后可逐一编辑每一天。',
+    weeklyLeaveTitle: '离开一周固定搭配？',
+    weeklyLeaveConfirm: '清空并切换',
+    weeklyLeaveDesc:
+      '一周固定搭配与其它周期互斥，切换会清空它的 7 张星期卡片，且无法撤销。',
+    weeklyDay0: '周日',
+    weeklyDay1: '周一',
+    weeklyDay2: '周二',
+    weeklyDay3: '周三',
+    weeklyDay4: '周四',
+    weeklyDay5: '周五',
+    weeklyDay6: '周六'
   },
   templates: {
     subtitle:
@@ -578,11 +658,32 @@ export default {
           '软链接的配置（stow / chezmoi 管理的 dotfiles）会穿透链接写入，不会把链接替换掉。'
       }
     },
+    rotation: {
+      title: '主题轮换——让状态栏按时间自动换装',
+      desc: '攒一组状态栏主题，让 CLI 按计划在它们之间自动切换。从编辑器顶部的「主题轮换」进入，配好后导出到终端即可。',
+      modes: {
+        schedule:
+          '设定多久换一次：每小时、每天、每周，或自定义「每 N 分钟 / 小时 / 天」。',
+        strategy:
+          '选择切换顺序：「顺序循环」按池子从上到下依次轮换，「随机」每次随机挑一个。卡片的上下顺序就是循环顺序——拖拽即可调整。',
+        weekly:
+          '也可以用「一周固定搭配」：七张卡片对应周日到周六，每天单独配一套——状态栏每周都会在对应那天穿上「那天的」样式。',
+        edit: '每套主题都是一份完整配置：可以在内置编辑器里实时预览着改、把编辑器当前配置存为一套主题、导入 JSON，或从模板起步。最多 20 套。'
+      },
+      cmdTitle: '开启与关闭',
+      cmdOn:
+        '用下载好的轮换包开启轮换：会先保存当前配置、注册定时任务，并立即应用当前时段的主题。命令和轮换包文件都在轮换页的「在终端使用」里拿。',
+      cmdOff: '关闭轮换——注销定时任务，并还原到开启之前的配置。',
+      entry:
+        '这台机器已经在轮换了？点「导入轮换包」可以把正在生效的那份从 ~/.config/ccsa/rotation.json 读回来，改完再重新导出。'
+    },
     pitfalls: {
       title: '踩坑记录',
       subtitle: '这些坑花了真实的排查时间——记在这里，希望你不用再花。',
       fnm: {
         title: 'fnm / nvm 用户：换个 Node 版本，全局装的 ccstatusline 就失效',
+        intro:
+          'ccstatusline 有两种用法："npx -y ccstatusline{\'@\'}latest"（免安装，状态栏每次刷新都重新解析），或全局安装（"npm i -g ccstatusline"）。这里记的是全局安装这一种——它更快，但也正是会被 fnm / nvm 坑到的那种。',
         symptomLabel: '现象：',
         symptom:
           '状态栏时好时坏：有的项目正常，切到用另一个 Node 版本的项目就空了。',

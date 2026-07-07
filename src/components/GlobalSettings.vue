@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { guardNumberInput, scrubNumberInput } from '@/lib/numberInput';
 import { POWERLINE_THEME_OPTIONS } from '@/preview/powerline';
 import { useConfigStore } from '@/stores/config';
 
@@ -201,7 +202,11 @@ function setEndCap(glyph: string | null) {
               >
                 <NumberFieldContent>
                   <NumberFieldDecrement class="p-1.5" />
-                  <NumberFieldInput class="h-7 text-xs" />
+                  <NumberFieldInput
+                    class="h-7 text-xs"
+                    @beforeinput="guardNumberInput($event, 99)"
+                    @input="scrubNumberInput($event, 99)"
+                  />
                   <NumberFieldIncrement class="p-1.5" />
                 </NumberFieldContent>
               </NumberField>
@@ -528,7 +533,11 @@ function setEndCap(glyph: string | null) {
               >
                 <NumberFieldContent>
                   <NumberFieldDecrement class="p-1.5" />
-                  <NumberFieldInput class="h-7 text-xs" />
+                  <NumberFieldInput
+                    class="h-7 text-xs"
+                    @beforeinput="guardNumberInput($event, 60)"
+                    @input="scrubNumberInput($event, 60)"
+                  />
                   <NumberFieldIncrement class="p-1.5" />
                 </NumberFieldContent>
               </NumberField>
@@ -542,6 +551,7 @@ function setEndCap(glyph: string | null) {
                 :min="0"
                 :model-value="cfg.refreshInterval ?? undefined"
                 class="w-28"
+                :format-options="{ useGrouping: false }"
                 @update:model-value="set({ refreshInterval: $event })"
               >
                 <NumberFieldContent>
@@ -549,6 +559,8 @@ function setEndCap(glyph: string | null) {
                   <NumberFieldInput
                     class="h-7 text-xs"
                     :placeholder="t('global.ph.default')"
+                    @beforeinput="guardNumberInput($event)"
+                    @input="scrubNumberInput($event)"
                   />
                   <NumberFieldIncrement class="p-1.5" />
                 </NumberFieldContent>

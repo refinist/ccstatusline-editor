@@ -27,13 +27,14 @@ This is a browser-based editor for [ccstatusline](https://github.com/sirmalloc/c
 - **Templates** — ready-made status lines you can apply in one click, then tweak.
 - **Share links** — send a link that reopens the editor with your exact config loaded.
 - **Round-trip editing** — apply a config from the editor via the companion `@refinist/ccsa` CLI, pull it back later with `@refinist/ccsa export`, and keep refining.
+- **Theme rotation** — build a pool of themes and have your status line switch between them automatically on a schedule (hourly / daily / weekly / a custom interval), or pin a fixed look to each weekday. Cycle in order or shuffle at random, then export the pool as a bundle the `@refinist/ccsa` CLI runs with `rotate on`. See [`ccsa-rotation-rainbow-week.json`](ccsa-rotation-rainbow-week.json) for a ready-to-run sample — a seven-theme "rainbow week" that rotates a fresh gradient and a per-weekday mood line every day.
 - **i18n** — English, 简体中文, 繁體中文.
 
 ## Getting started
 
 ```bash
 pnpm install
-# frontend dev server (http://localhost:5173)
+# frontend dev server (http://localhost:3173)
 pnpm dev
 ```
 

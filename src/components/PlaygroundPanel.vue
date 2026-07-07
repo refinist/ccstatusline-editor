@@ -94,9 +94,11 @@ const preCls =
           </StepperItem>
         </Stepper>
 
-        <!-- tip: no restart needed -->
+        <!-- tip: no restart needed. ml-11 = the stepper's indent (size-6 badge +
+             the StepperItem's gap-2 + the content's ml-3 = 44px), so this sits
+             flush-left with step 2's command box above, not hanging past it. -->
         <div
-          class="border-border bg-muted/30 text-muted-foreground flex gap-2 rounded-md border px-3 py-2 text-xs leading-relaxed"
+          class="border-border bg-muted/30 text-muted-foreground ml-11 flex gap-2 rounded-md border px-3 py-2 text-xs leading-relaxed"
         >
           <Info class="mt-0.5 size-3.5 shrink-0" />
           <span>{{ t('playground.tip') }}</span>

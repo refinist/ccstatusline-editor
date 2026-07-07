@@ -6,6 +6,7 @@ import {
   Copy,
   Info,
   ListOrdered,
+  Repeat,
   Sparkles,
   TerminalSquare,
   TriangleAlert
@@ -48,6 +49,17 @@ const CLI_COMMANDS = [
   { id: 'cmdClean', cmd: 'npx -y @refinist/ccsa@latest clean' }
 ] as const;
 
+// The rotate on/off pair, shown in the rotation section under help.rotation.
+// `<bundle.json>` is a placeholder — the rotation page hands out the real
+// filename (and the -f command) from its "Use in Terminal" drawer.
+const ROTATION_COMMANDS = [
+  {
+    id: 'cmdOn',
+    cmd: 'npx -y @refinist/ccsa@latest rotate on -f <bundle.json>'
+  },
+  { id: 'cmdOff', cmd: 'npx -y @refinist/ccsa@latest rotate off' }
+] as const;
+
 const FEATURE_IDS = [
   'preview',
   'widgets',
@@ -56,6 +68,7 @@ const FEATURE_IDS = [
   'roundtrip'
 ] as const;
 const SAFETY_IDS = ['backup', 'merge', 'atomic', 'symlink'] as const;
+const ROTATION_MODE_IDS = ['schedule', 'strategy', 'weekly', 'edit'] as const;
 const FAQ_IDS = ['nerdFont', 'colorLevel', 'separators', 'flexMode'] as const;
 
 const { copy } = useClipboard();
@@ -185,6 +198,43 @@ const preCls =
           </div>
         </section>
 
+        <!-- Theme rotation -->
+        <section class="space-y-3">
+          <h2 class="flex items-center gap-2 text-base font-semibold">
+            <Repeat class="size-4 shrink-0 text-[#D97757]" />
+            {{ t('help.rotation.title') }}
+          </h2>
+          <p class="text-muted-foreground text-sm leading-relaxed">
+            {{ t('help.rotation.desc') }}
+          </p>
+          <ul class="text-muted-foreground space-y-1.5 text-sm leading-relaxed">
+            <li
+              v-for="id in ROTATION_MODE_IDS"
+              :key="id"
+              class="flex items-start gap-2"
+            >
+              <Check class="mt-0.5 size-3.5 shrink-0 text-[#D97757]" />
+              <span>{{ t(`help.rotation.modes.${id}`) }}</span>
+            </li>
+          </ul>
+          <div class="space-y-1.5">
+            <h3 class="text-foreground text-sm font-medium">
+              {{ t('help.rotation.cmdTitle') }}
+            </h3>
+            <div class="space-y-2.5">
+              <!-- Same comment-then-command block as the CLI section above. -->
+              <pre
+                v-for="c in ROTATION_COMMANDS"
+                :key="c.id"
+                :class="preCls"
+              ><span class="text-muted-foreground"># {{ t(`help.rotation.${c.id}`) }}</span>{{ `\n${c.cmd}` }}</pre>
+            </div>
+          </div>
+          <p class="text-muted-foreground text-sm leading-relaxed">
+            {{ t('help.rotation.entry') }}
+          </p>
+        </section>
+
         <!-- Pitfalls -->
         <section class="space-y-3">
           <h2 class="flex items-center gap-2 text-base font-semibold">
@@ -201,6 +251,9 @@ const preCls =
             <h3 class="text-foreground text-base font-semibold">
               {{ t('help.pitfalls.fnm.title') }}
             </h3>
+            <p class="text-muted-foreground">
+              {{ t('help.pitfalls.fnm.intro') }}
+            </p>
             <p class="text-muted-foreground">
               <strong class="text-foreground font-medium">
                 {{ t('help.pitfalls.fnm.symptomLabel') }}

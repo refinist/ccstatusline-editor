@@ -15,6 +15,7 @@ import {
   PopoverTrigger
 } from '@/components/ui/popover';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { guardNumberInput, scrubNumberInput } from '@/lib/numberInput';
 import {
   ansi256ToHex,
   GRADIENT_PRESET_NAMES,
@@ -279,6 +280,8 @@ function setTab(v: unknown) {
                 class="h-7 text-xs"
                 placeholder="0–255"
                 maxlength="3"
+                @beforeinput="guardNumberInput($event, 255)"
+                @input="scrubNumberInput($event, 255)"
               />
               <NumberFieldIncrement class="p-1.5" />
             </NumberFieldContent>

@@ -136,8 +136,9 @@ html {
   /* oklch interpolation: the default sRGB interpolation produces abrupt lightness/chroma
      jumps across the indigo → pink → orange-red segments, which reads visually as
      "jumping" rather than "flowing"; oklch is a perceptually uniform space, so the
-     interpolation is smoother. */
-  background-image: linear-gradient(
+     interpolation is smoother. Held in a var so the pogo chars (below) can
+     paint their own aligned copy of the same image. */
+  --ccse-title-gradient: linear-gradient(
     90deg in oklch,
     #3f51b1,
     #5a55ae,
@@ -150,6 +151,7 @@ html {
     #f7c978,
     #3f51b1
   );
+  background-image: var(--ccse-title-gradient);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -181,20 +183,26 @@ html {
 }
 /* While mid-pogo the letters need to escape `truncate`'s overflow clip (the
    title's line box has almost no headroom above the glyphs); the ellipsis
-   behavior comes right back when the bounce ends ~0.8s later. */
+   behavior comes right back when the bounce ends ~0.8s later. The gradient
+   flow also freezes in place for the duration (the chars paint their own
+   confetti colors anyway) and resumes from the same spot on landing. */
 .ccse-title-bouncing {
   overflow: visible !important;
+  animation-play-state: paused;
 }
-/* The char paints its own confetti color over the parent's gradient for the
-   duration of the hop. text-fill-color must be re-set too: the parent's
-   `transparent` would otherwise inherit through and win over `color`. Doubling
-   as a workaround: browsers get flaky painting a background-clip:text parent's
-   gradient onto transformed children, and an own fill sidesteps that entirely. */
+/* Mid-hop the char paints its own copy of the title gradient, pixel-aligned to
+   the parent's (paused) flow via --jbs/--jbp measured in JS — so every letter
+   keeps exactly the color it was showing and carries it through the jump.
+   An own background is also the workaround for browsers getting flaky painting
+   a background-clip:text parent's gradient onto transformed children. */
 .ccse-title-ch--pogo {
   animation: ccse-title-pogo 0.6s cubic-bezier(0.28, 0.84, 0.42, 1)
     var(--jd, 0s) both;
-  color: var(--jc, #f18271);
-  -webkit-text-fill-color: var(--jc, #f18271);
+  background-image: var(--ccse-title-gradient);
+  background-size: var(--jbs, 200%) auto;
+  background-position-x: var(--jbp, 0);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 @keyframes ccse-title-pogo {
   0% {
@@ -224,8 +232,57 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .ccse-title-ch--pogo {
     animation: none;
-    color: inherit;
-    -webkit-text-fill-color: inherit;
+  }
+}
+/* The logo's follow-up act, chained onto the pogo's landing (EditorPage.vue):
+   a jelly squash-and-stretch — pulled flat against the ground, then released
+   into a tall overshoot and a few decaying "duang" wobbles back to rest.
+   Bottom-anchored origin so the squash reads as pressing into the floor. */
+.ccse-logo-pop {
+  animation: ccse-logo-pop 0.95s ease-in-out both;
+  transform-origin: 50% 100%;
+}
+@keyframes ccse-logo-pop {
+  0% {
+    transform: none;
+  }
+  /* pulled down flat: wide and squashed… */
+  16% {
+    transform: scale(1.38, 0.52);
+  }
+  /* …and held a beat deeper, loading the spring */
+  24% {
+    transform: scale(1.5, 0.42);
+  }
+  /* release! shoots up tall and narrow */
+  38% {
+    transform: scale(0.68, 1.55);
+  }
+  /* duang… */
+  52% {
+    transform: scale(1.3, 0.75);
+  }
+  /* …duang… */
+  64% {
+    transform: scale(0.85, 1.22);
+  }
+  /* …duang, each swing losing energy */
+  76% {
+    transform: scale(1.12, 0.92);
+  }
+  86% {
+    transform: scale(0.95, 1.06);
+  }
+  94% {
+    transform: scale(1.02, 0.98);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-logo-pop {
+    animation: none;
   }
 }
 
@@ -425,6 +482,17 @@ body.ccse-grabbing .ccse-item-active {
 body.ccse-grabbing,
 body.ccse-grabbing * {
   cursor: grabbing !important;
+}
+
+/* While a drag handle is held (fallback drags are plain mouse/touch moves),
+   block native text selection everywhere so the drag can't paint a selection
+   highlight across neighbouring cards; -webkit-touch-callout also silences the
+   iOS long-press copy menu */
+body.ccse-drag-noselect,
+body.ccse-drag-noselect * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none;
 }
 
 /* The "full width - 40" reserved zone in the preview terminal: hatching + fading to indicate this width is unavailable (reserved for Claude's auto-compact hint) */
@@ -644,4 +712,149 @@ body.ccse-grabbing * {
 .ccse-zone-line::-webkit-scrollbar,
 .ccse-noscrollbar::-webkit-scrollbar {
   display: none; /* WebKit: Chrome / Safari */
+}
+
+
+/* Live-editing dot: breathing kept compact — no expanding ping wave. The dot
+   itself swells only slightly but dims deeply (opacity is what sells the
+   rhythm), plus a tight 3px halo that puffs out and dissolves each cycle. */
+@keyframes ccse-live-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(217, 119, 87, 0.55);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px rgba(217, 119, 87, 0);
+  }
+}
+.ccse-live-dot {
+  animation: ccse-live-dot 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-live-dot {
+    animation: none;
+  }
+}
+
+/* Live-editing badge spring: fired once the editor pane has finished sliding in
+   (badgePop, see RotationPage.vue), the "正在编辑轮换主题：<name>" label — already
+   at full size — pulses up then wobbles back down to rest. A uniform-scale echo
+   of the logo pop's jelly bounce (kept uniform so the text doesn't distort like
+   the logo's squash/stretch), decaying over-and-under swings settling to 1. It
+   pulses in place from its resting size — no fade, no grow-from-nothing. Runs
+   from the wrapper's own center (parent handles the centering translate). */
+@keyframes ccse-live-pop {
+  0% {
+    transform: scale(1);
+  }
+  /* the "放大": a big overshoot up… */
+  26% {
+    transform: scale(1.38);
+  }
+  /* …"缩小": dip well past rest… */
+  48% {
+    transform: scale(0.86);
+  }
+  /* …a springy rebound… */
+  66% {
+    transform: scale(1.14);
+  }
+  82% {
+    transform: scale(0.95);
+  }
+  /* …and settle */
+  100% {
+    transform: scale(1);
+  }
+}
+.ccse-live-pop {
+  animation: ccse-live-pop 0.65s ease-in-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-live-pop {
+    animation: none;
+  }
+}
+
+/* ============ "New" nav badge ============
+   The rotation link's "New" tag. A flat static pill got lost in the header, so
+   this stacks three cheap-but-loud layers on one tiny rounded pill:
+   · a warm gradient that flows sideways, all in the app's own palette:
+     Claude-orange (#D97757, the one brand accent) anchored at both ends, with
+     the header title's warm gradient stops (#f18271 → #f3a469 → #f7c978)
+     flowing between — so the tag reads as the same family as the title (reuses
+     ccse-gradient-flow's background-position pan; the loop back to #D97757 hides
+     the seam)
+   · a breathing halo in that same brand orange (rgb 217 119 87) — the exact glow
+     the live-editing dot uses, sized for a rounded rect
+   · a white sheen that sweeps diagonally across on a spaced-out loop — the bit
+     that actually snags a wandering eye
+   A static base glow lives outside the keyframes so reduced-motion still reads
+   as "highlighted", just without the movement. */
+.ccse-new-badge {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background-image: linear-gradient(
+    90deg in oklch,
+    #d97757,
+    #f18271,
+    #f3a469,
+    #f7c978,
+    #d97757
+  );
+  background-size: 200% auto;
+  box-shadow: 0 0 6px 0 rgba(217, 119, 87, 0.5);
+  animation:
+    ccse-gradient-flow 3s linear infinite,
+    ccse-new-breathe 1.8s ease-in-out infinite;
+}
+/* Diagonal sheen sweep, parked off the left edge between passes. */
+.ccse-new-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    75deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.9) 50%,
+    transparent 65%
+  );
+  transform: translateX(-130%);
+  animation: ccse-new-sweep 2.6s ease-in-out infinite;
+}
+@keyframes ccse-new-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(217, 119, 87, 0.55),
+      0 0 5px 0 rgba(217, 119, 87, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(217, 119, 87, 0),
+      0 0 11px 2px rgba(217, 119, 87, 0.85);
+  }
+}
+@keyframes ccse-new-sweep {
+  0%,
+  60%,
+  100% {
+    transform: translateX(-130%);
+  }
+  80% {
+    transform: translateX(130%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccse-new-badge {
+    animation: none;
+  }
+  .ccse-new-badge::after {
+    display: none;
+  }
 }

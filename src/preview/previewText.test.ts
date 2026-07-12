@@ -76,6 +76,11 @@ describe('previewText — usage percentage (USAGE_PCT)', () => {
       )
     ).toBe('Session: ▓▓▓▓▓▓▓▓░░');
   });
+  it('invert also flips the plain percent (remaining instead of used, v2.2.23)', () => {
+    expect(
+      previewText(w('session-usage', { metadata: { invert: 'true' } }))
+    ).toBe('Session: 80.0%');
+  });
 });
 
 describe('previewText — timer family (TIMER)', () => {
@@ -97,6 +102,50 @@ describe('previewText — working directory (cwd)', () => {
     expect(
       previewText(w('current-working-dir', { metadata: { fishStyle: 'true' } }))
     ).toBe('cwd: ~/D/P/my-project');
+  });
+  it('an optional glyph prefixes the output; raw mode swaps it for the cwd: label', () => {
+    expect(previewText(w('current-working-dir', { character: '📁' }))).toBe(
+      '📁 cwd: /Users/example/Documents/Projects/my-project'
+    );
+    expect(
+      previewText(w('current-working-dir', { character: '📁', rawValue: true }))
+    ).toBe('📁 /Users/example/Documents/Projects/my-project');
+  });
+});
+
+describe('previewText — compaction counter (v2.2.23)', () => {
+  it('trigger split suffix skips zero buckets; empty reclaimed symbol collapses', () => {
+    expect(
+      previewText(
+        w('compaction-counter', { metadata: { showTriggers: 'true' } })
+      )
+    ).toBe('↻ 2 (1 auto, 1 manual)');
+    expect(
+      previewText(
+        w('compaction-counter', {
+          metadata: { showReclaimed: 'true', symbolReclaimed: '' }
+        })
+      )
+    ).toBe('↻ 2 120k');
+  });
+  it.each([
+    ['auto', '1'],
+    ['manual', '1'],
+    ['unknown', '0'],
+    ['reclaimed', '120k']
+  ])('metric=%s renders the bare value %s', (metric, out) => {
+    expect(previewText(w('compaction-counter', { metadata: { metric } }))).toBe(
+      out
+    );
+  });
+  it('metric mode ignores the composite display options', () => {
+    expect(
+      previewText(
+        w('compaction-counter', {
+          metadata: { metric: 'auto', format: 'text-and-number' }
+        })
+      )
+    ).toBe('1');
   });
 });
 
@@ -237,11 +286,12 @@ describe('previewText — format / symbol options', () => {
         w('compaction-counter', { metadata: { format: 'text-and-number' } })
       )
     ).toBe('Compactions: 2');
+    // Reclaimed falls back to the ↓ default symbol (RECLAIMED_SLOT).
     expect(
       previewText(
         w('compaction-counter', { metadata: { showReclaimed: 'true' } })
       )
-    ).toBe('↻ 2 120k');
+    ).toBe('↻ 2 ↓120k');
   });
   it('git-ahead-behind / git-status: custom symbols', () => {
     expect(previewText(w('git-ahead-behind'))).toBe('↑2↓3');

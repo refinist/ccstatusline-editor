@@ -1,4 +1,4 @@
-// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.22).
+// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.23).
 // Given a widget instance, returns the exact text the terminal would show in
 // preview mode for the current options (rawValue, display mode, format, glyph
 // override, cwd style, etc.). Returns null for widgets whose preview never
@@ -149,7 +149,9 @@ function usagePct(
       mode === 'slider' ? `${s} ${rendered.toFixed(1)}%` : s
     );
   }
-  return labeled(w, label, `${pct.toFixed(1)}%`);
+  // Since v2.2.23 the plain percent honors the direction too (renderedPercent):
+  // inverted shows remaining instead of used.
+  return labeled(w, label, `${rendered.toFixed(1)}%`);
 }
 
 // timer widgets: [labelBar, labelTime, pct, timeCompact, timeFull]
@@ -207,7 +209,9 @@ function cwd(w: Widget): string {
   else if (home) path = '~/Documents/Projects/my-project';
   else if (hasSeg) path = segs === 1 ? '.../project' : '.../example/project';
   else path = '/Users/example/Documents/Projects/my-project';
-  return raw(w) ? path : `cwd: ${path}`;
+  // Optional glyph (default none); in raw mode it replaces the cwd: label.
+  const prefix = symPrefix(w, '');
+  return raw(w) ? `${prefix}${path}` : `${prefix}cwd: ${path}`;
 }
 
 function vim(w: Widget): string {
@@ -257,7 +261,14 @@ function link(w: Widget): string {
   return raw(w) ? label : `🔗 ${label}`;
 }
 
+// Mirrors CompactionCounter's SAMPLE_STATS: count 2 (1 auto, 1 manual,
+// 0 unknown), 120k tokens reclaimed. hideZero only applies outside preview.
 function compaction(w: Widget): string {
+  const metric = meta(w, 'metric');
+  // A sub-metric renders just that one value as a bare number (getMetricValue).
+  if (metric === 'auto' || metric === 'manual') return '1';
+  if (metric === 'unknown') return '0';
+  if (metric === 'reclaimed') return '120k';
   const format = meta(w, 'format') ?? 'icon-space-number';
   const nerd = metaOn(w, 'nerdFont') && format === 'icon-space-number';
   const icon = nerd ? '' : '↻';
@@ -267,9 +278,12 @@ function compaction(w: Widget): string {
       : format === 'number'
         ? '2'
         : `${icon} 2`;
+  // formatTriggerSuffix skips zero buckets — unknown (0) never shows here.
+  if (metaOn(w, 'showTriggers')) out += ' (1 auto, 1 manual)';
   if (metaOn(w, 'showReclaimed')) {
-    const s = meta(w, 'symbolReclaimed');
-    out += s ? ` ${s}120k` : ' 120k';
+    // Empty override collapses the symbol; unset falls back to '↓'.
+    const s = meta(w, 'symbolReclaimed') ?? '↓';
+    out += s.length > 0 ? ` ${s}120k` : ' 120k';
   }
   return out;
 }

@@ -99,14 +99,37 @@ describe('showIf conditional visibility', () => {
     expect(lim.showIf!(w('skills'))).toBe(false);
     expect(lim.showIf!(w('skills', { metadata: { mode: 'list' } }))).toBe(true);
   });
-  it('usage percentage: invert shows only in bar mode', () => {
-    const inv = opt('session-usage', 'invert');
-    expect(inv.showIf!(w('session-usage'))).toBe(false);
+  it('usage percentage: the used/remaining direction toggle is available in every display mode (v2.2.23)', () => {
+    const inv = opt('session-usage', 'inverse');
+    expect(inv.metaKey).toBe('invert');
+    expect(inv.showIf).toBeUndefined();
+  });
+  it('compaction-counter: composite-display options hide for sub-metrics; hideZero stays (v2.2.23)', () => {
+    for (const id of [
+      'format',
+      'showTriggers',
+      'showReclaimed',
+      'symbolReclaimed'
+    ] as const) {
+      const o = opt('compaction-counter', id);
+      expect(o.showIf!(w('compaction-counter')), id).toBe(true);
+      expect(
+        o.showIf!(w('compaction-counter', { metadata: { metric: 'auto' } })),
+        id
+      ).toBe(false);
+    }
+    expect(opt('compaction-counter', 'hideZero').showIf).toBeUndefined();
+    // an invalid metric value falls back to 'count' (ccstatusline getMetric)
     expect(
-      inv.showIf!(
-        w('session-usage', { metadata: { display: 'progress-short' } })
+      opt('compaction-counter', 'format').showIf!(
+        w('compaction-counter', { metadata: { metric: 'bogus' } })
       )
     ).toBe(true);
+  });
+  it('git-branch / git-root-dir expose maxWidth; cwd exposes the glyph override (v2.2.23)', () => {
+    expect(opt('git-branch', 'maxWidth').field).toBe('maxWidth');
+    expect(opt('git-root-dir', 'maxWidth').field).toBe('maxWidth');
+    expect(opt('current-working-dir', 'glyph').field).toBe('character');
   });
 });
 
@@ -359,7 +382,7 @@ describe('ccstatusline v2.2.22 alignment fixes (round two)', () => {
     for (const [type, id] of [
       ['git-branch', 'hideNoGit'],
       ['cache-hit-rate', 'hideWhenEmpty'],
-      ['session-usage', 'invert']
+      ['session-usage', 'inverse']
     ] as const) {
       const o = opt(type, id);
       expect(o.deleteOnOff, `${type}.${id}`).toBeFalsy();

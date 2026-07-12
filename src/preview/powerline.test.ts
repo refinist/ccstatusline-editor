@@ -306,6 +306,41 @@ describe('renderPowerlineLines — autoAlign and colorLevel', () => {
     expect(t1.endsWith('  ')).toBe(true);
   });
 
+  it('excludeFromAutoAlign keeps the flagged widget at its natural width', () => {
+    const [l1, l2] = renderPowerlineLines(
+      [
+        [w('git-insertions', { excludeFromAutoAlign: true })],
+        [w('git-origin-owner-repo')]
+      ],
+      pl({ autoAlign: true }),
+      ' '
+    );
+    const t1 = segText(widgets(l1)[0]);
+    const t2 = segText(widgets(l2)[0]);
+    expect(visibleWidth(t1)).toBe(visibleWidth(' +42 '));
+    expect(visibleWidth(t1)).not.toBe(visibleWidth(t2));
+  });
+
+  it('excludeFromAutoAlign stops alignment for the rest of the line but keeps earlier columns aligned', () => {
+    const [l1, l2] = renderPowerlineLines(
+      [
+        [
+          w('git-insertions'),
+          w('git-insertions', { excludeFromAutoAlign: true })
+        ],
+        [w('git-origin-owner-repo'), w('git-origin-owner-repo')]
+      ],
+      pl({ autoAlign: true }),
+      ' '
+    );
+    // Column 0 still aligns across lines…
+    expect(visibleWidth(segText(widgets(l1)[0]))).toBe(
+      visibleWidth(segText(widgets(l2)[0]))
+    );
+    // …while the excluded widget keeps its natural width.
+    expect(visibleWidth(segText(widgets(l1)[1]))).toBe(visibleWidth(' +42 '));
+  });
+
   it('colorLevel=0 outputs no color at all', () => {
     const [line] = renderPowerlineLines(
       [

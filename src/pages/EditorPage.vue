@@ -83,7 +83,7 @@ watch(smUp, up => {
 
 // Version number next to the title (mirrors ccstatusline's title "| v…"
 // structure); links to the upstream repo the version is tracking.
-const version = '2.2.22';
+const version = '2.2.23';
 const CCSTATUSLINE_REPO_URL = 'https://github.com/sirmalloc/ccstatusline';
 
 // ── Title easter egg ─────────────────────────────────────────────────────────

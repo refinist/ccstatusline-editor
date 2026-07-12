@@ -133,6 +133,7 @@ export default {
     mergeNext: '合併右鄰',
     merge: '合併',
     mergeNoPad: '無間距',
+    noAlign: '不參與自動對齊',
     hide: '隱藏此部件',
     clone: '克隆',
     delete: '刪除',
@@ -238,6 +239,7 @@ export default {
     display: '顯示方式',
     contextDisplay: '顯示方式',
     format: '格式',
+    metric: '顯示值',
     mode: '視圖',
     ideLink: 'IDE 連結',
     separatorChar: '分隔符',
@@ -280,6 +282,11 @@ export default {
       iconNumber: '圖示 數字',
       textNumber: '文字+數字',
       numberOnly: '僅數字',
+      metricCount: '次數（完整）',
+      metricAuto: '自動',
+      metricManual: '手動',
+      metricUnknown: '未知',
+      metricReclaimed: '回收量',
       lastUsed: '最近使用',
       totalCount: '總次數',
       uniqueList: '去重清單',
@@ -634,7 +641,9 @@ export default {
       step1: '在編輯器裡拼好你的狀態列。',
       step2: '開啟「在終端機使用」，複製產生的命令。',
       step3:
-        '貼上到終端機執行——CLI 會先備份再寫入配置，狀態列自動重新整理，無需重新啟動。'
+        '貼上到終端機執行——CLI 會先備份再寫入配置，狀態列自動重新整理，無需重新啟動。',
+      versionNote:
+        "編輯器會緊跟 ccstatusline 的版本更新——上游每發新版，這裡的部件和選項都會很快同步。請把你本機的 ccstatusline 也保持在最新版本，否則在這裡配置的新選項可能在舊版 CLI 裡不生效。透過 npx ccstatusline{'@'}latest 執行的始終是最新版；全域安裝的則需要手動升級。"
     },
     cli: {
       title: "{'@'}refinist/ccsa——從瀏覽器到本機磁碟的橋樑",

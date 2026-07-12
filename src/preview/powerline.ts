@@ -1,5 +1,5 @@
 // Powerline-mode preview rendering — a faithful port of ccstatusline's
-// renderPowerlineStatusLine (utils/renderer.ts, v2.2.x) to the web preview.
+// renderPowerlineStatusLine (utils/renderer.ts, v2.2.23) to the web preview.
 //
 // In powerline mode ccstatusline abandons the normal separator pipeline:
 //   - manual `separator` widgets are filtered out (they still break `merge`)
@@ -789,6 +789,10 @@ export function renderPowerlineLines(
     for (const { els } of perLine) {
       let pos = 0;
       for (let i = 0; i < els.length; i++) {
+        // An excluded group head opts itself and the rest of the line out of
+        // the shared column widths (ccstatusline breaks in
+        // calculateMaxWidthsFromPreRendered).
+        if (els[i]!.w.excludeFromAutoAlign) break;
         // Combined width of the whole merge group (ccstatusline counts
         // padding per member, except across a no-padding merge).
         let total = visibleWidth(els[i]!.text) + padLen * 2;
@@ -808,6 +812,9 @@ export function renderPowerlineLines(
     for (const { els } of perLine) {
       let pos = 0;
       for (let i = 0; i < els.length; i++) {
+        // Mirror the skip above: no alignment padding for the excluded group
+        // or anything after it on this line.
+        if (els[i]!.w.excludeFromAutoAlign) break;
         let combined = visibleWidth(
           els[i]!.lead + els[i]!.text + els[i]!.trail
         );

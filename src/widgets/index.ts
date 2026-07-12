@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
 
-// AUTO-GENERATED widget catalog mirroring ccstatusline v2.2.22 (all 85 widgets).
+// AUTO-GENERATED widget catalog mirroring ccstatusline v2.2.23 (all 85 widgets).
 // type     : registry key
 // category : matches ccstatusline ADD WIDGET menu
 // color    : ccstatusline ANSI default color name (mapped to a tailwind class for preview)
@@ -436,7 +436,7 @@ export const WIDGET_BY_TYPE: Map<string, WidgetMeta> = new Map(
 
 /**
  * A widget instance placed on a status line.
- * Field set mirrors ccstatusline's WidgetItem (v2.2.22) so the emitted JSON
+ * Field set mirrors ccstatusline's WidgetItem (v2.2.23) so the emitted JSON
  * is consumed verbatim by the real ccstatusline renderer.
  */
 export interface Widget {
@@ -456,7 +456,7 @@ export interface Widget {
   customText?: string;
   customSymbol?: string;
   commandPath?: string;
-  /** custom-command: truncate output to N chars. */
+  /** Truncate visible text to N chars (custom-command output, git-branch / git-root-dir names). */
   maxWidth?: number;
   /** custom-command: keep ANSI colors from command output. */
   preserveColors?: boolean;
@@ -464,6 +464,12 @@ export interface Widget {
   timeout?: number;
   /** Fuse with the next widget: true = drop separator (keep padding); 'no-padding' = glue. */
   merge?: boolean | 'no-padding';
+  /**
+   * Powerline autoAlign opt-out: this widget and everything after it on the
+   * same line keep their natural width (no shared-column padding). Only
+   * meaningful on a merge-group head — merged-in widgets follow their group.
+   */
+  excludeFromAutoAlign?: boolean;
   /** Hide this widget entirely. */
   hide?: boolean;
   metadata?: Record<string, string>;

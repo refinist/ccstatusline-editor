@@ -140,6 +140,7 @@ export default {
     mergeNext: 'Merge next',
     merge: 'Merge',
     mergeNoPad: 'No-pad',
+    noAlign: 'Exclude from auto-align',
     hide: 'Hide this widget',
     clone: 'Clone',
     delete: 'Delete',
@@ -252,6 +253,7 @@ export default {
     display: 'Display',
     contextDisplay: 'Display',
     format: 'Format',
+    metric: 'Value',
     mode: 'View',
     ideLink: 'IDE link',
     separatorChar: 'Separator',
@@ -294,6 +296,11 @@ export default {
       iconNumber: 'Icon N',
       textNumber: 'Text+N',
       numberOnly: 'Number only',
+      metricCount: 'Count (full)',
+      metricAuto: 'Auto',
+      metricManual: 'Manual',
+      metricUnknown: 'Unknown',
+      metricReclaimed: 'Reclaimed',
       lastUsed: 'Last used',
       totalCount: 'Total count',
       uniqueList: 'Unique list',
@@ -670,7 +677,9 @@ export default {
       step1: 'Build your status line in the editor.',
       step2: 'Open "Use in Terminal" and copy the generated command.',
       step3:
-        'Paste it into your terminal — the CLI backs up and writes the config. The status line refreshes on its own, no restart needed.'
+        'Paste it into your terminal — the CLI backs up and writes the config. The status line refreshes on its own, no restart needed.',
+      versionNote:
+        "The editor keeps pace with ccstatusline releases — new widgets and options land here shortly after each upstream version. Keep your local ccstatusline on the latest version too, or options configured here may not take effect in an older CLI. Running it via npx ccstatusline{'@'}latest always uses the latest; a globally installed copy needs a manual update."
     },
     cli: {
       title: "{'@'}refinist/ccsa — the bridge from browser to disk",

@@ -159,6 +159,9 @@ const preCls =
             <li>{{ t('help.workflow.step2') }}</li>
             <li>{{ t('help.workflow.step3') }}</li>
           </ol>
+          <p class="text-muted-foreground text-sm leading-relaxed">
+            {{ t('help.workflow.versionNote') }}
+          </p>
         </section>
 
         <!-- The ccsa CLI -->

@@ -1,5 +1,5 @@
 // Declarative per-widget capability table, derived from a full audit of
-// ccstatusline v2.2.22 widget sources. Each widget's *type-specific* operations
+// ccstatusline v2.2.23 widget sources. Each widget's *type-specific* operations
 // (the things the TUI exposes as per-widget hotkeys / sub-editors) are described
 // here as control descriptors, so the Inspector renders one data-driven panel
 // for all 83 widgets instead of 83 hand-written forms.
@@ -154,6 +154,15 @@ const COMPACTION_FORMAT = [
   O('text-and-number', 'wopt.opt.textNumber'),
   O('number', 'wopt.opt.numberOnly')
 ];
+// compaction-counter metric selector: 'count' keeps the composite display; the
+// others emit that single value as a bare number for composing custom layouts.
+const COMPACTION_METRIC = [
+  O('count', 'wopt.opt.metricCount'),
+  O('auto', 'wopt.opt.metricAuto'),
+  O('manual', 'wopt.opt.metricManual'),
+  O('unknown', 'wopt.opt.metricUnknown'),
+  O('reclaimed', 'wopt.opt.metricReclaimed')
+];
 const SKILLS_MODE = [
   O('current', 'wopt.opt.lastUsed'),
   O('count', 'wopt.opt.totalCount'),
@@ -183,6 +192,16 @@ const isBar = (w: Widget) => {
 };
 const isTimeMode = (w: Widget) => !isBar(w);
 const metaOn = (k: string) => (w: Widget) => w.metadata?.[k] === 'true';
+// compaction-counter getMetric: anything but a valid sub-metric means 'count'.
+const isCompactionCount = (w: Widget) => {
+  const m = w.metadata?.metric;
+  return !(
+    m === 'auto' ||
+    m === 'manual' ||
+    m === 'unknown' ||
+    m === 'reclaimed'
+  );
+};
 
 // ── option builders ────────────────────────────────────────────────────────
 const toggleMeta = (
@@ -209,10 +228,21 @@ const symbolSlot = (id: string, metaKey: string): WidgetOption => ({
   metaKey,
   placeholderKey: 'wopt.ph.default'
 });
+/** Truncate the widget's visible text to N chars (ccstatusline applyMaxWidth). */
+const maxWidth = (): WidgetOption => ({
+  id: 'maxWidth',
+  control: 'number',
+  field: 'maxWidth',
+  positiveOnly: true,
+  placeholderKey: 'wopt.ph.noLimit'
+});
 
-// Usage-percentage family: bar display + invert (bar modes only). `cursor` is a
-// real control for session/weekly widgets, but extra-usage-utilization's render
-// ignores it (dead metadata), so that one opts out via usagePct({ cursor: false }).
+// Usage-percentage family: bar display + used/remaining direction. Since
+// v2.2.23 `invert` is a direction toggle that also flips the plain percent
+// text (renderedPercent), so it's available in every display mode — it reuses
+// the context-percentage "Show remaining" label. `cursor` is a real control
+// for session/weekly widgets, but extra-usage-utilization's render ignores it
+// (dead metadata), so that one opts out via usagePct({ cursor: false }).
 const usagePct = (opts: { cursor?: boolean } = {}): WidgetOption[] => {
   const list: WidgetOption[] = [
     {
@@ -222,7 +252,7 @@ const usagePct = (opts: { cursor?: boolean } = {}): WidgetOption[] => {
       options: DISPLAY_USAGE_PCT,
       defaultValue: ''
     },
-    { id: 'invert', control: 'toggle', metaKey: 'invert', showIf: isBar }
+    { id: 'inverse', control: 'toggle', metaKey: 'invert' }
   ];
   if (opts.cursor !== false)
     list.push({
@@ -337,7 +367,8 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       deleteOnOff: true,
       legacyMetaKey: 'linkToGitHub'
     }),
-    glyph()
+    glyph(),
+    maxWidth()
   ],
   'git-changes': [hideNoGit()],
   'git-insertions': [hideNoGit()],
@@ -375,7 +406,8 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       defaultValue: '',
       legacyMetaKey: 'linkToCursor',
       legacyValue: 'cursor'
-    }
+    },
+    maxWidth()
   ],
   'git-review': [
     hideNoGit(),
@@ -426,7 +458,8 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       metaKey: 'segments',
       positiveOnly: true,
       placeholderKey: 'wopt.ph.full'
-    }
+    },
+    glyph()
   ],
 
   // Cache
@@ -512,22 +545,43 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
     }
   ],
   'compaction-counter': [
+    // metric ≠ count switches the widget to a single bare value; the composite
+    // display's own controls (format / nerd font / trigger split / reclaimed)
+    // only apply to 'count', so they hide for sub-metrics — mirroring the
+    // TUI's keybind set, which shrinks to (v)alue + (h)ide-zero there. The
+    // metadata itself is kept (ccstatusline's cycle-metric doesn't clear it),
+    // so switching back to 'count' restores the previous composite setup.
+    {
+      id: 'metric',
+      control: 'enum',
+      metaKey: 'metric',
+      options: COMPACTION_METRIC,
+      defaultValue: 'count',
+      select: true
+    },
     {
       id: 'format',
       control: 'enum',
       metaKey: 'format',
       options: COMPACTION_FORMAT,
       defaultValue: 'icon-space-number',
-      clearsMeta: ['nerdFont']
+      clearsMeta: ['nerdFont'],
+      showIf: isCompactionCount
     },
     toggleMeta('nerdFont', 'nerdFont', {
       showIf: w =>
+        isCompactionCount(w) &&
         (w.metadata?.format ?? 'icon-space-number') === 'icon-space-number',
       deleteOnOff: true
     }),
-    toggleMeta('showTriggers', 'showTriggers'),
-    toggleMeta('showReclaimed', 'showReclaimed'),
-    symbolSlot('symbolReclaimed', 'symbolReclaimed'),
+    toggleMeta('showTriggers', 'showTriggers', { showIf: isCompactionCount }),
+    toggleMeta('showReclaimed', 'showReclaimed', {
+      showIf: isCompactionCount
+    }),
+    {
+      ...symbolSlot('symbolReclaimed', 'symbolReclaimed'),
+      showIf: isCompactionCount
+    },
     toggleMeta('hideZero', 'hideZero')
   ],
 

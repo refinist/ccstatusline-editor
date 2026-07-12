@@ -100,6 +100,31 @@ const mergeable = computed(
   () => hasNext.value && !isSeparator.value && !isFlexSep.value
 );
 
+// Merged into the widget before it? (the immediate previous non-separator
+// neighbour carries `merge` — separators break merge chains.)
+const mergedIntoPrev = computed(() => {
+  if (!sel.value) return false;
+  const line = store.config.lines[sel.value.lineIndex]!;
+  const prev = line[line.findIndex(x => x.id === w.value!.id) - 1];
+  return (
+    !!prev &&
+    prev.type !== 'separator' &&
+    prev.type !== 'flex-separator' &&
+    !!prev.merge
+  );
+});
+// excludeFromAutoAlign mirrors the TUI's `e(x)clude align` gate: only offered
+// while powerline auto-align is on, and only on merge-chain heads (merged-in
+// widgets follow their group's width).
+const canNoAlign = computed(
+  () =>
+    store.config.powerline.enabled &&
+    store.config.powerline.autoAlign &&
+    !isSeparator.value &&
+    !isFlexSep.value &&
+    !mergedIntoPrev.value
+);
+
 function patch(p: Partial<Widget>) {
   if (w.value) store.updateWidget(w.value.id, p);
 }
@@ -628,16 +653,17 @@ function resetDefaults() {
 
           <FieldSeparator v-if="canColor || canRaw || specificOptions.length" />
 
-          <!-- ── Layout ── merge is the only control in this group; when not
-               mergeable (separator / flex-separator / last widget on a line),
-               the whole group hides along with its heading, so we don't end up
-               with an empty "Layout" heading over just clone/delete buttons. -->
-          <FieldSet v-if="mergeable">
+          <!-- ── Layout ── merge + powerline no-align; when neither applies
+               (separator / flex-separator / last widget on a line with
+               auto-align off), the whole group hides along with its heading,
+               so we don't end up with an empty "Layout" heading over just
+               clone/delete buttons. -->
+          <FieldSet v-if="mergeable || canNoAlign">
             <FieldLegend variant="label">
               {{ t('inspector.groupLayout') }}
             </FieldLegend>
             <FieldGroup>
-              <Field orientation="horizontal">
+              <Field v-if="mergeable" orientation="horizontal">
                 <FieldLabel>{{ t('inspector.mergeNext') }}</FieldLabel>
                 <ToggleGroup
                   type="single"
@@ -655,6 +681,18 @@ function resetDefaults() {
                     {{ t(m.key) }}
                   </ToggleGroupItem>
                 </ToggleGroup>
+              </Field>
+              <Field v-if="canNoAlign" orientation="horizontal">
+                <FieldLabel for="insp-no-align">
+                  {{ t('inspector.noAlign') }}
+                </FieldLabel>
+                <Switch
+                  id="insp-no-align"
+                  :model-value="!!w.excludeFromAutoAlign"
+                  @update:model-value="
+                    patch({ excludeFromAutoAlign: $event ? true : undefined })
+                  "
+                />
               </Field>
             </FieldGroup>
           </FieldSet>

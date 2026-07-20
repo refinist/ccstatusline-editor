@@ -1,8 +1,9 @@
 // Declarative per-widget capability table, derived from a full audit of
-// ccstatusline v2.2.23 widget sources. Each widget's *type-specific* operations
+// ccstatusline v2.2.23 widget sources plus the v2.2.24 widget additions. Each
+// widget's *type-specific* operations
 // (the things the TUI exposes as per-widget hotkeys / sub-editors) are described
 // here as control descriptors, so the Inspector renders one data-driven panel
-// for all 83 widgets instead of 83 hand-written forms.
+// for all 86 non-layout widgets instead of 86 hand-written forms.
 //
 // Universal operations (color / background / bold / dim / rawValue / merge /
 // clone / delete) are NOT listed here — the Inspector renders those for every
@@ -65,6 +66,8 @@ export interface WidgetOption {
   positiveOnly?: boolean;
   /** Placeholder i18n key for text/number inputs. */
   placeholderKey?: string;
+  /** Text only: keep an explicit empty string instead of deleting the key. */
+  preserveEmpty?: boolean;
   /** When enabling this toggle / setting this value, also clear these metadata keys. */
   clearsMeta?: string[];
   /**
@@ -141,6 +144,15 @@ const STATUS_FORMAT = [
   O('icon-text', 'wopt.opt.iconText'),
   O('text', 'wopt.opt.text'),
   O('word', 'wopt.opt.word')
+];
+const SANDBOX_FORMAT = [
+  O('glyph', 'wopt.opt.glyph'),
+  O('text', 'wopt.opt.text'),
+  O('word', 'wopt.opt.word')
+];
+const CACHE_TTL = [
+  O('300', 'wopt.opt.fiveMinutes'),
+  O('3600', 'wopt.opt.oneHour')
 ];
 // remote-control-status has two extra format values that voice-status does NOT:
 // its FORMATS enum is icon / icon-text / text / word / label-check / label-mark.
@@ -226,6 +238,7 @@ const symbolSlot = (id: string, metaKey: string): WidgetOption => ({
   id,
   control: 'text',
   metaKey,
+  preserveEmpty: true,
   placeholderKey: 'wopt.ph.default'
 });
 /** Truncate the widget's visible text to N chars (ccstatusline applyMaxWidth). */
@@ -359,6 +372,23 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
   'vim-mode': formatNerd(VIM_FORMAT, 'icon-dash-letter'),
   'voice-status': formatNerd(STATUS_FORMAT, 'icon'),
   'remote-control-status': formatNerd(REMOTE_STATUS_FORMAT, 'icon'),
+  'sandbox-status': [
+    {
+      id: 'format',
+      control: 'enum',
+      metaKey: 'format',
+      options: SANDBOX_FORMAT,
+      defaultValue: 'glyph',
+      clearsMeta: ['nerdFont']
+    },
+    {
+      id: 'nerdFont',
+      control: 'toggle',
+      metaKey: 'nerdFont',
+      deleteOnOff: true,
+      showIf: w => (w.metadata?.format ?? 'glyph') === 'glyph'
+    }
+  ],
 
   // Git — single-symbol glyph + hide-no-git
   'git-branch': [
@@ -414,6 +444,7 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
     toggleMeta('hideStatus', 'hideStatus'),
     toggleMeta('hideTitle', 'hideTitle')
   ],
+  'git-ci-status': [hideNoGit()],
   'git-is-fork': [toggleMeta('hideWhenNotFork', 'hideWhenNotFork')],
   // Git remotes
   'git-origin-owner': remoteOpts(),
@@ -474,6 +505,21 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
   'cache-write': [
     toggleMeta('cacheSession', 'cacheScopeSession'),
     toggleMeta('hideWhenEmpty', 'hideWhenEmpty')
+  ],
+  'cache-timer': [
+    {
+      id: 'ttl',
+      control: 'enum',
+      metaKey: 'ttlSeconds',
+      options: CACHE_TTL,
+      defaultValue: '300'
+    },
+    toggleMeta('hideWhenEmpty', 'hideWhenEmpty'),
+    symbolSlot('symbolHot', 'symbolHot'),
+    symbolSlot('symbolFresh', 'symbolFresh'),
+    symbolSlot('symbolDraining', 'symbolDraining'),
+    symbolSlot('symbolUrgent', 'symbolUrgent'),
+    symbolSlot('symbolCold', 'symbolCold')
   ],
 
   // Token Speed

@@ -64,6 +64,46 @@ describe('optionsFor', () => {
   });
 });
 
+describe('ccstatusline v2.2.24 widget options', () => {
+  it('git-ci-status supports hiding outside git repositories', () => {
+    expect(optionsFor('git-ci-status').map(o => o.id)).toEqual(['hideNoGit']);
+  });
+
+  it('sandbox-status exposes its formats and Nerd Font only in glyph mode', () => {
+    const format = opt('sandbox-status', 'format');
+    expect(format.options?.map(o => o.value)).toEqual([
+      'glyph',
+      'text',
+      'word'
+    ]);
+    expect(format.defaultValue).toBe('glyph');
+    expect(format.clearsMeta).toContain('nerdFont');
+
+    const nerd = opt('sandbox-status', 'nerdFont');
+    expect(nerd.showIf!(w('sandbox-status'))).toBe(true);
+    expect(
+      nerd.showIf!(w('sandbox-status', { metadata: { format: 'text' } }))
+    ).toBe(false);
+  });
+
+  it('cache-timer exposes TTL, empty-state, and all five symbol slots', () => {
+    expect(optionsFor('cache-timer').map(o => o.id)).toEqual([
+      'ttl',
+      'hideWhenEmpty',
+      'symbolHot',
+      'symbolFresh',
+      'symbolDraining',
+      'symbolUrgent',
+      'symbolCold'
+    ]);
+    expect(opt('cache-timer', 'ttl').options?.map(o => o.value)).toEqual([
+      '300',
+      '3600'
+    ]);
+    expect(opt('cache-timer', 'symbolFresh').preserveEmpty).toBe(true);
+  });
+});
+
 describe('showIf conditional visibility', () => {
   it('timer: bar-family controls (invert) show only in progress-bar mode', () => {
     const invert = opt('reset-timer', 'invert');

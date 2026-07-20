@@ -159,7 +159,7 @@ function isOn(o: WidgetOption): boolean {
 }
 
 function setText(o: WidgetOption, value: string) {
-  const v = value.trim() === '' ? undefined : value;
+  const v = value.trim() === '' && !o.preserveEmpty ? undefined : value;
   if (o.field) patch({ [o.field]: v } as Partial<Widget>);
   else writeMeta(o, v);
 }
@@ -236,7 +236,8 @@ function writeMeta(
 ) {
   const item = w.value!;
   const meta = { ...(item.metadata || {}) };
-  if (value === undefined || value === '') delete meta[o.metaKey!];
+  if (value === undefined || (value === '' && !o.preserveEmpty))
+    delete meta[o.metaKey!];
   else meta[o.metaKey!] = value;
   if (clears) for (const k of clears) delete meta[k];
   patch({ metadata: Object.keys(meta).length ? meta : undefined });

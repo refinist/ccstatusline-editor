@@ -169,6 +169,8 @@ export default {
     overrideBg: '背景覆盖',
     defaultSeparator: '默认分隔符',
     defaultPadding: '默认填充符',
+    paddingSide: '填充方向',
+    padding: { both: '双侧', left: '左侧', right: '右侧' },
     inheritSepColors: '分隔符继承颜色',
     on: '开',
     plEnable: '启用 Powerline',

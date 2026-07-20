@@ -112,6 +112,7 @@ export const TEMPLATES: Template[] = [
       globalBold: false,
       gitCacheTtlSeconds: 5,
       minimalistMode: false,
+      defaultPaddingSide: 'both',
       powerline: {
         enabled: false,
         separators: [''],
@@ -217,6 +218,7 @@ export const TEMPLATES: Template[] = [
       gitCacheTtlSeconds: 5,
       minimalistMode: false,
       defaultPadding: ' ',
+      defaultPaddingSide: 'both',
       powerline: {
         enabled: true,
         separators: [''],

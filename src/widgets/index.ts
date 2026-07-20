@@ -493,6 +493,8 @@ export interface Widget {
   metadata?: Record<string, string>;
 }
 
+export type DefaultPaddingSide = 'both' | 'left' | 'right';
+
 export interface CcStatusConfig {
   version: number;
   lines: Widget[][];
@@ -505,8 +507,10 @@ export interface CcStatusConfig {
   minimalistMode: boolean;
   /** Auto-separator inserted between every adjacent widget (mutually exclusive with manual separators / powerline). */
   defaultSeparator?: string;
-  /** Padding added to the left+right of every widget. */
+  /** Padding added around every widget. */
   defaultPadding?: string;
+  /** Which side(s) receive defaultPadding. */
+  defaultPaddingSide: DefaultPaddingSide;
   /** Force every widget's foreground (named / ansi256 / hex / gradient). */
   overrideForegroundColor?: string;
   /** Force every widget's background (named / ansi256 / hex). */
@@ -537,6 +541,7 @@ export function emptyConfig(): CcStatusConfig {
     globalBold: false,
     gitCacheTtlSeconds: 5,
     minimalistMode: false,
+    defaultPaddingSide: 'both',
     powerline: {
       enabled: false,
       separators: ['\uE0B0'],

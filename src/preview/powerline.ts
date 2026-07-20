@@ -1,5 +1,5 @@
 // Powerline-mode preview rendering — a faithful port of ccstatusline's
-// renderPowerlineStatusLine (utils/renderer.ts, v2.2.23) to the web preview.
+// renderPowerlineStatusLine (utils/renderer.ts, v2.2.24) to the web preview.
 //
 // In powerline mode ccstatusline abandons the normal separator pipeline:
 //   - manual `separator` widgets are filtered out (they still break `merge`)
@@ -20,7 +20,11 @@
 // PowerlineGlyph.vue. This module only resolves geometry-free data: per line,
 // an ordered list of segments / glyph slots / flex gaps with final CSS colors.
 
-import { WIDGET_BY_TYPE, type Widget } from '@/widgets';
+import {
+  WIDGET_BY_TYPE,
+  type DefaultPaddingSide,
+  type Widget
+} from '@/widgets';
 import {
   colorClass,
   downgradeHex,
@@ -667,7 +671,8 @@ export function renderPowerlineLines(
   lines: Widget[][],
   pl: PowerlineConfigLike,
   defaultPadding: string,
-  g?: RenderGlobals
+  g?: RenderGlobals,
+  defaultPaddingSide: DefaultPaddingSide = 'both'
 ): PowerlineItem[][] {
   const level = g?.colorLevel ?? 3;
   const separators = pl.separators ?? [];
@@ -689,6 +694,8 @@ export function renderPowerlineLines(
     overrideFg?.startsWith('gradient:') && level >= 2 ? overrideFg : undefined;
 
   const isStruct = (t: string) => t === 'separator' || t === 'flex-separator';
+  const leadingPadding = defaultPaddingSide === 'right' ? '' : defaultPadding;
+  const trailingPadding = defaultPaddingSide === 'left' ? '' : defaultPadding;
 
   // ── pass 1: per line, build elements + flex/segment bookkeeping ───────────
   const perLine: { els: El[]; leadingFlex: number }[] = lines.map(line => {
@@ -736,8 +743,8 @@ export function renderPowerlineLines(
       const el: El = {
         w,
         text: widgetText(w, g),
-        lead: omitLead ? '' : defaultPadding,
-        trail: omitTrail ? '' : defaultPadding,
+        lead: omitLead ? '' : leadingPadding,
+        trail: omitTrail ? '' : trailingPadding,
         alignPad: 0,
         mergesWithNext,
         flexAfter: 0,
@@ -784,7 +791,7 @@ export function renderPowerlineLines(
 
   // ── pass 3: autoAlign column widths across all lines ──────────────────────
   if (pl.autoAlign) {
-    const padLen = defaultPadding.length;
+    const paddingPairLength = leadingPadding.length + trailingPadding.length;
     const maxWidths: number[] = [];
     for (const { els } of perLine) {
       let pos = 0;
@@ -795,14 +802,14 @@ export function renderPowerlineLines(
         if (els[i]!.w.excludeFromAutoAlign) break;
         // Combined width of the whole merge group (ccstatusline counts
         // padding per member, except across a no-padding merge).
-        let total = visibleWidth(els[i]!.text) + padLen * 2;
+        let total = visibleWidth(els[i]!.text) + paddingPairLength;
         let j = i;
         while (j < els.length - 1 && els[j]!.mergesWithNext) {
           j++;
           total +=
             els[j - 1]!.w.merge === 'no-padding'
               ? visibleWidth(els[j]!.text)
-              : visibleWidth(els[j]!.text) + padLen * 2;
+              : visibleWidth(els[j]!.text) + paddingPairLength;
         }
         maxWidths[pos] = Math.max(maxWidths[pos] ?? 0, total);
         i = j;

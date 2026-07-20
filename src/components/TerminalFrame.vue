@@ -55,6 +55,12 @@ const defaultSep = computed(() =>
   props.config.powerline.enabled ? '' : (props.config.defaultSeparator ?? '')
 );
 const defaultPadding = computed(() => props.config.defaultPadding ?? '');
+const hasLeftPadding = computed(
+  () => props.config.defaultPaddingSide !== 'right'
+);
+const hasRightPadding = computed(
+  () => props.config.defaultPaddingSide !== 'left'
+);
 const inheritSepColors = computed(
   () => !props.config.powerline.enabled && !!props.config.inheritSeparatorColors
 );
@@ -77,7 +83,8 @@ const plLines = computed<PowerlineItem[][] | null>(() =>
         lines.value,
         props.config.powerline,
         defaultPadding.value,
-        globals.value
+        globals.value,
+        props.config.defaultPaddingSide
       )
     : null
 );
@@ -92,6 +99,8 @@ function renderLine(line: Widget[]) {
     kind: 'widget' | 'sep' | 'flex';
     w?: Widget;
     from?: Widget;
+    omitLead?: boolean;
+    omitTrail?: boolean;
     key: string;
   }[] = [];
   line.forEach((w, i) => {
@@ -129,7 +138,14 @@ function renderLine(line: Widget[]) {
         key: w.id
       });
     } else {
-      items.push({ kind: 'widget', w, key: w.id });
+      const next = line[i + 1];
+      items.push({
+        kind: 'widget',
+        w,
+        key: w.id,
+        omitLead: !!prev && !isStruct(prev.type) && prev.merge === 'no-padding',
+        omitTrail: w.merge === 'no-padding' && !!next && !isStruct(next.type)
+      });
     }
   });
   return items;
@@ -273,7 +289,12 @@ onBeforeUnmount(() => {
                   class="inline-flex shrink-0 items-center whitespace-pre"
                 >
                   <span
-                    v-if="defaultPadding && it.w!.type !== 'separator'"
+                    v-if="
+                      defaultPadding &&
+                      hasLeftPadding &&
+                      !it.omitLead &&
+                      it.w!.type !== 'separator'
+                    "
                     class="whitespace-pre"
                   >
                     {{ defaultPadding }}
@@ -287,7 +308,12 @@ onBeforeUnmount(() => {
                     {{ tok.text }}
                   </span>
                   <span
-                    v-if="defaultPadding && it.w!.type !== 'separator'"
+                    v-if="
+                      defaultPadding &&
+                      hasRightPadding &&
+                      !it.omitTrail &&
+                      it.w!.type !== 'separator'
+                    "
                     class="whitespace-pre"
                   >
                     {{ defaultPadding }}
@@ -350,7 +376,12 @@ onBeforeUnmount(() => {
                 </span>
                 <span v-else class="inline-flex items-center whitespace-pre">
                   <span
-                    v-if="defaultPadding && it.w!.type !== 'separator'"
+                    v-if="
+                      defaultPadding &&
+                      hasLeftPadding &&
+                      !it.omitLead &&
+                      it.w!.type !== 'separator'
+                    "
                     class="whitespace-pre"
                   >
                     {{ defaultPadding }}
@@ -364,7 +395,12 @@ onBeforeUnmount(() => {
                     {{ tok.text }}
                   </span>
                   <span
-                    v-if="defaultPadding && it.w!.type !== 'separator'"
+                    v-if="
+                      defaultPadding &&
+                      hasRightPadding &&
+                      !it.omitTrail &&
+                      it.w!.type !== 'separator'
+                    "
                     class="whitespace-pre"
                   >
                     {{ defaultPadding }}

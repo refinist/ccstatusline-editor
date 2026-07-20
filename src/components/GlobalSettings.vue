@@ -55,6 +55,11 @@ const COLOR_LEVELS = [
   { v: 2, key: 'global.level.c256' },
   { v: 3, key: 'global.level.true' }
 ];
+const PADDING_SIDES = [
+  { v: 'both', key: 'global.padding.both' },
+  { v: 'left', key: 'global.padding.left' },
+  { v: 'right', key: 'global.padding.right' }
+];
 // value = the theme key stored in JSON; label = the display name shown in ccstatusline's TUI.
 const PL_THEMES = POWERLINE_THEME_OPTIONS;
 // Powerline glyphs are private-use chars (need a patched font), so the buttons
@@ -327,6 +332,27 @@ function setEndCap(glyph: string | null) {
                   set({ defaultPadding: String($event) || undefined })
                 "
               />
+            </Field>
+            <Field orientation="horizontal">
+              <FieldLabel>{{ t('global.paddingSide') }}</FieldLabel>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                :model-value="cfg.defaultPaddingSide"
+                @update:model-value="
+                  $event && set({ defaultPaddingSide: $event as any })
+                "
+              >
+                <ToggleGroupItem
+                  v-for="side in PADDING_SIDES"
+                  :key="side.v"
+                  :value="side.v"
+                  class="h-7 px-2 text-xs"
+                >
+                  {{ t(side.key) }}
+                </ToggleGroupItem>
+              </ToggleGroup>
             </Field>
             <Field
               orientation="horizontal"

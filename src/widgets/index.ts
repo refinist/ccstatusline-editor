@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
 
-// AUTO-GENERATED widget catalog mirroring ccstatusline v2.2.23 (all 85 widgets).
+// AUTO-GENERATED widget catalog mirroring ccstatusline v2.2.24 (all 88 widgets).
 // type     : registry key
 // category : matches ccstatusline ADD WIDGET menu
 // color    : ccstatusline ANSI default color name (mapped to a tailwind class for preview)
@@ -84,6 +84,12 @@ export const WIDGETS: WidgetMeta[] = [
     category: 'Git',
     color: 'cyan',
     preview: 'PR #42 OPEN Example PR title'
+  },
+  {
+    type: 'git-ci-status',
+    category: 'Git',
+    color: 'green',
+    preview: '✗1 ●1 ✓5'
   },
   { type: 'git-worktree', category: 'Git', color: 'blue', preview: '𖠰 main' },
   { type: 'git-status', category: 'Git', color: 'yellow', preview: '+*' },
@@ -388,6 +394,12 @@ export const WIDGETS: WidgetMeta[] = [
     preview: 'Skill: commit'
   },
   {
+    type: 'cache-timer',
+    category: 'Session',
+    color: 'brightCyan',
+    preview: 'Cache: 🟢 4:52'
+  },
+  {
     type: 'thinking-effort',
     category: 'Core',
     color: 'magenta',
@@ -400,6 +412,12 @@ export const WIDGETS: WidgetMeta[] = [
     category: 'Core',
     color: 'blue',
     preview: '📡 ◉'
+  },
+  {
+    type: 'sandbox-status',
+    category: 'Core',
+    color: 'green',
+    preview: 'SB: ●'
   },
   { type: 'worktree-mode', category: 'Git', color: 'yellow', preview: '⎇' },
   {

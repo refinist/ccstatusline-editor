@@ -349,3 +349,35 @@ describe('previewText — format / symbol options', () => {
     expect(previewText(w('jj-bookmarks', { character: '@' }))).toBe('@ main');
   });
 });
+
+describe('previewText — ccstatusline v2.2.24 widgets', () => {
+  it('git-ci-status renders the check rollup or raw state', () => {
+    expect(previewText(w('git-ci-status'))).toBe('✗1 ●1 ✓5');
+    expect(previewText(w('git-ci-status', { rawValue: true }))).toBe('failing');
+  });
+
+  it('sandbox-status supports every format, Nerd Font, and raw value', () => {
+    expect(previewText(w('sandbox-status'))).toBe('SB: ●');
+    expect(
+      previewText(w('sandbox-status', { metadata: { nerdFont: 'true' } }))
+    ).toBe('SB: ');
+    expect(
+      previewText(w('sandbox-status', { metadata: { format: 'text' } }))
+    ).toBe('SB: ON');
+    expect(
+      previewText(w('sandbox-status', { metadata: { format: 'word' } }))
+    ).toBe('Sandbox: ON');
+    expect(previewText(w('sandbox-status', { rawValue: true }))).toBe('●');
+  });
+
+  it('cache-timer supports raw value and custom or blank fresh glyphs', () => {
+    expect(previewText(w('cache-timer'))).toBe('Cache: 🟢 4:52');
+    expect(previewText(w('cache-timer', { rawValue: true }))).toBe('🟢 4:52');
+    expect(
+      previewText(w('cache-timer', { metadata: { symbolFresh: '#' } }))
+    ).toBe('Cache: # 4:52');
+    expect(
+      previewText(w('cache-timer', { metadata: { symbolFresh: '' } }))
+    ).toBe('Cache: 4:52');
+  });
+});

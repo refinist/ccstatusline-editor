@@ -1,4 +1,5 @@
-// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.23).
+// Faithful port of ccstatusline's render() isPreview branches through v2.2.23,
+// plus the widgets introduced in v2.2.24.
 // Given a widget instance, returns the exact text the terminal would show in
 // preview mode for the current options (rawValue, display mode, format, glyph
 // override, cwd style, etc.). Returns null for widgets whose preview never
@@ -248,6 +249,20 @@ function statusWidget(w: Widget, emoji: string): string {
   }
 }
 
+function sandboxStatus(w: Widget): string {
+  const format = meta(w, 'format') ?? 'glyph';
+  const glyph = metaOn(w, 'nerdFont') ? '' : '●';
+  if (format === 'text') return raw(w) ? 'ON' : 'SB: ON';
+  if (format === 'word') return raw(w) ? 'ON' : 'Sandbox: ON';
+  return raw(w) ? glyph : `SB: ${glyph}`;
+}
+
+function cacheTimer(w: Widget): string {
+  const symbol = meta(w, 'symbolFresh') ?? '🟢';
+  const value = symbol.length > 0 ? `${symbol} 4:52` : '4:52';
+  return labeled(w, 'Cache: ', value);
+}
+
 function skills(w: Widget): string {
   const mode = meta(w, 'mode') ?? 'current';
   if (mode === 'count') return raw(w) ? '5' : 'Skills: 5';
@@ -365,6 +380,8 @@ export function previewText(w: Widget): string | null {
         ti = !metaOn(w, 'hideTitle');
       return `PR #42${s ? ' OPEN' : ''}${ti ? ' Example PR title' : ''}`;
     }
+    case 'git-ci-status':
+      return raw(w) ? 'failing' : '✗1 ●1 ✓5';
     case 'git-origin-owner-repo':
       return metaOn(w, 'ownerOnlyWhenFork') ? 'owner' : 'owner/repo';
     case 'jj-revision':
@@ -377,6 +394,10 @@ export function previewText(w: Widget): string | null {
       return statusWidget(w, '🎤');
     case 'remote-control-status':
       return statusWidget(w, '📡');
+    case 'sandbox-status':
+      return sandboxStatus(w);
+    case 'cache-timer':
+      return cacheTimer(w);
     case 'skills':
       return skills(w);
     case 'link':

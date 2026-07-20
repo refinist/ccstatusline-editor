@@ -33,4 +33,8 @@ describe('all-widget default rendering × catalog golden-master comparison', () 
     const types = WIDGETS.map(m => m.type);
     expect(new Set(types).size).toBe(types.length);
   });
+
+  it('mirrors all 88 widgets in ccstatusline v2.2.24', () => {
+    expect(WIDGETS).toHaveLength(88);
+  });
 });

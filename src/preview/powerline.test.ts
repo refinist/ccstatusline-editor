@@ -114,6 +114,20 @@ describe('renderPowerlineLines — segments and arrows', () => {
     expect(seg.bg).toBe('#112233');
   });
 
+  it.each([
+    ['left', ' Model: Claude'],
+    ['right', 'Model: Claude ']
+  ] as const)('supports %s-only padding', (side, output) => {
+    const [line] = renderPowerlineLines(
+      [[w('model')]],
+      pl(),
+      ' ',
+      undefined,
+      side
+    );
+    expect(segText(widgets(line)[0])).toBe(output);
+  });
+
   it('no arrow is inserted between merged widgets; no-padding merge removes the adjacent inner padding', () => {
     const [line] = renderPowerlineLines(
       [[w('git-insertions', { merge: 'no-padding' }), w('git-deletions')]],
@@ -125,6 +139,23 @@ describe('renderPowerlineLines — segments and arrows', () => {
     expect(segText(a)).toBe(' +42'); // trailing padding is omitted
     expect(segText(b)).toBe('-10 '); // leading padding is omitted
   });
+
+  it.each([
+    ['left', [' +42', '-10']],
+    ['right', ['+42', '-10 ']]
+  ] as const)(
+    'keeps only the outer %s padding on a no-padding merge group',
+    (side, output) => {
+      const [line] = renderPowerlineLines(
+        [[w('git-insertions', { merge: 'no-padding' }), w('git-deletions')]],
+        pl(),
+        ' ',
+        undefined,
+        side
+      );
+      expect(widgets(line).map(segText)).toEqual(output);
+    }
+  );
 
   it('a manual separator widget is invisible under powerline, but still breaks a merge', () => {
     const [line] = renderPowerlineLines(
@@ -304,6 +335,20 @@ describe('renderPowerlineLines — autoAlign and colorLevel', () => {
     const t2 = segText(widgets(l2)[0]);
     expect(visibleWidth(t1)).toBe(visibleWidth(t2));
     expect(t1.endsWith('  ')).toBe(true);
+  });
+
+  it('counts one-sided padding once when calculating autoAlign widths', () => {
+    const [l1, l2] = renderPowerlineLines(
+      [[w('git-insertions')], [w('git-origin-owner-repo')]],
+      pl({ autoAlign: true }),
+      ' ',
+      undefined,
+      'left'
+    );
+    const t1 = segText(widgets(l1)[0]);
+    const t2 = segText(widgets(l2)[0]);
+    expect(visibleWidth(t1)).toBe(visibleWidth(' owner/repo'));
+    expect(visibleWidth(t2)).toBe(visibleWidth(' owner/repo'));
   });
 
   it('excludeFromAutoAlign keeps the flagged widget at its natural width', () => {

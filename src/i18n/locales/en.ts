@@ -181,6 +181,8 @@ export default {
     overrideBg: 'Override background',
     defaultSeparator: 'Default separator',
     defaultPadding: 'Default padding',
+    paddingSide: 'Padding side',
+    padding: { both: 'Both', left: 'Left', right: 'Right' },
     inheritSepColors: 'Separators inherit colors',
     on: 'on',
     plEnable: 'Enable Powerline',

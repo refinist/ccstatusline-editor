@@ -439,6 +439,10 @@ describe('additional widget removal and cloning behavior', () => {
 });
 
 describe('global config patching', () => {
+  it('defaults padding to both sides', () => {
+    expect(useConfigStore().config.defaultPaddingSide).toBe('both');
+  });
+
   it('updateConfig merges a top-level patch; undefined deletes the key', () => {
     const store = useConfigStore();
     store.updateConfig({ defaultSeparator: ' ' });
@@ -618,6 +622,7 @@ describe('loadConfig (the unified entry point for templates/share links/JSON imp
     expect(store.config.powerline).toEqual(defaultConfig().powerline);
     expect(store.config.flexMode).toBe(defaultConfig().flexMode);
     expect(store.config.colorLevel).toBe(defaultConfig().colorLevel);
+    expect(store.config.defaultPaddingSide).toBe('both');
   });
 
   it('fields that are passed in still take priority over defaults (they are not overwritten by defaults)', () => {

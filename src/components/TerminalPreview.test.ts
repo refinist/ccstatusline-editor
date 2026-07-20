@@ -17,6 +17,8 @@ function renderPreview(cfg: ReturnType<typeof emptyConfig>) {
   return renderToString(app);
 }
 
+const visibleText = (html: string) => html.replace(/<[^>]+>/g, '');
+
 describe('TerminalPreview — powerline SSR smoke test', () => {
   it('renders themed color segments and SVG arrows when powerline is enabled', async () => {
     const cfg = emptyConfig();
@@ -61,4 +63,41 @@ describe('TerminalPreview — powerline SSR smoke test', () => {
     expect(html).not.toContain('<svg');
     expect(html).toContain('Model: Claude');
   });
+});
+
+describe('TerminalPreview — default padding side', () => {
+  it.each([
+    ['both', '_Model: Claude_'],
+    ['left', '_Model: Claude'],
+    ['right', 'Model: Claude_']
+  ] as const)(
+    'applies padding to %s in standard mode',
+    async (side, output) => {
+      const cfg = emptyConfig();
+      cfg.defaultPadding = '_';
+      cfg.defaultPaddingSide = side;
+      cfg.lines[0] = [{ id: 'a', type: 'model' }];
+
+      expect(visibleText(await renderPreview(cfg))).toContain(output);
+    }
+  );
+
+  it.each([
+    ['both', '_+42-10_'],
+    ['left', '_+42-10'],
+    ['right', '+42-10_']
+  ] as const)(
+    'keeps only the outer %s padding around a no-padding merge group',
+    async (side, output) => {
+      const cfg = emptyConfig();
+      cfg.defaultPadding = '_';
+      cfg.defaultPaddingSide = side;
+      cfg.lines[0] = [
+        { id: 'a', type: 'git-insertions', merge: 'no-padding' },
+        { id: 'b', type: 'git-deletions' }
+      ];
+
+      expect(visibleText(await renderPreview(cfg))).toContain(output);
+    }
+  );
 });

@@ -454,7 +454,7 @@ export const WIDGET_BY_TYPE: Map<string, WidgetMeta> = new Map(
 
 /**
  * A widget instance placed on a status line.
- * Field set mirrors ccstatusline's WidgetItem (v2.2.23) so the emitted JSON
+ * Field set mirrors ccstatusline's WidgetItem (v2.2.24) so the emitted JSON
  * is consumed verbatim by the real ccstatusline renderer.
  */
 export interface Widget {

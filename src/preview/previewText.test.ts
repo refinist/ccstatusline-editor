@@ -254,15 +254,115 @@ describe('previewText — format / symbol options', () => {
       previewText(w('vim-mode', { metadata: { format: 'icon-letter' } }))
     ).toBe('v N');
     expect(previewText(w('vim-mode'))).toBe('v-N');
+    expect(
+      previewText(
+        w('vim-mode', {
+          metadata: { format: 'icon-letter', nerdFont: 'true' }
+        })
+      )
+    ).toBe(' N');
+    expect(
+      previewText(
+        w('vim-mode', { metadata: { format: 'letter', nerdFont: 'true' } })
+      )
+    ).toBe('N');
+    expect(
+      previewText(
+        w('vim-mode', { metadata: { format: 'word', nerdFont: 'true' } })
+      )
+    ).toBe('NORMAL');
   });
-  it('voice-status: each format', () => {
+  it('voice-status preserves the selected representation in raw mode', () => {
     expect(previewText(w('voice-status'))).toBe('🎤 ◉');
+    expect(
+      previewText(w('voice-status', { metadata: { nerdFont: 'true' } }))
+    ).toBe('');
+    expect(previewText(w('voice-status', { rawValue: true }))).toBe('◉');
+    expect(
+      previewText(
+        w('voice-status', {
+          rawValue: true,
+          metadata: { nerdFont: 'true' }
+        })
+      )
+    ).toBe('');
     expect(
       previewText(w('voice-status', { metadata: { format: 'icon-text' } }))
     ).toBe('🎤 on');
     expect(
+      previewText(
+        w('voice-status', {
+          metadata: { format: 'icon-text', nerdFont: 'true' }
+        })
+      )
+    ).toBe(' on');
+    expect(
+      previewText(
+        w('voice-status', {
+          rawValue: true,
+          metadata: { format: 'icon-text', nerdFont: 'true' }
+        })
+      )
+    ).toBe('on');
+    expect(
       previewText(w('voice-status', { metadata: { format: 'text' } }))
     ).toBe('on');
+    expect(
+      previewText(w('voice-status', { metadata: { format: 'word' } }))
+    ).toBe('voice on');
+    expect(
+      previewText(
+        w('voice-status', { rawValue: true, metadata: { format: 'word' } })
+      )
+    ).toBe('on');
+  });
+  it('remote-control-status supports all label and raw combinations', () => {
+    expect(previewText(w('remote-control-status'))).toBe('📡 ◉');
+    expect(
+      previewText(
+        w('remote-control-status', { metadata: { nerdFont: 'true' } })
+      )
+    ).toBe('');
+    expect(previewText(w('remote-control-status', { rawValue: true }))).toBe(
+      '◉'
+    );
+    expect(
+      previewText(
+        w('remote-control-status', {
+          rawValue: true,
+          metadata: { format: 'icon-text', nerdFont: 'true' }
+        })
+      )
+    ).toBe('on');
+    expect(
+      previewText(w('remote-control-status', { metadata: { format: 'word' } }))
+    ).toBe('remote on');
+    expect(
+      previewText(
+        w('remote-control-status', { metadata: { format: 'label-check' } })
+      )
+    ).toBe('remote ✅');
+    expect(
+      previewText(
+        w('remote-control-status', {
+          rawValue: true,
+          metadata: { format: 'label-check' }
+        })
+      )
+    ).toBe('✅');
+    expect(
+      previewText(
+        w('remote-control-status', { metadata: { format: 'label-mark' } })
+      )
+    ).toBe('remote ✓');
+    expect(
+      previewText(
+        w('remote-control-status', {
+          rawValue: true,
+          metadata: { format: 'label-mark' }
+        })
+      )
+    ).toBe('✓');
   });
   it('skills: each mode', () => {
     expect(previewText(w('skills'))).toBe('Skill: commit');

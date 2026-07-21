@@ -1,5 +1,4 @@
-// Faithful port of ccstatusline's render() isPreview branches through v2.2.23,
-// plus the widgets introduced in v2.2.24.
+// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.24).
 // Given a widget instance, returns the exact text the terminal would show in
 // preview mode for the current options (rawValue, display mode, format, glyph
 // override, cwd style, etc.). Returns null for widgets whose preview never
@@ -216,8 +215,21 @@ function cwd(w: Widget): string {
 }
 
 function vim(w: Widget): string {
-  const format = meta(w, 'format') ?? 'icon-dash-letter';
-  const icon = metaOn(w, 'nerdFont') ? '' : 'v';
+  const configured = meta(w, 'format');
+  const format = [
+    'icon-dash-letter',
+    'icon-letter',
+    'icon',
+    'letter',
+    'word'
+  ].includes(configured ?? '')
+    ? configured!
+    : 'icon-dash-letter';
+  const canUseNerdFont =
+    format === 'icon-dash-letter' ||
+    format === 'icon-letter' ||
+    format === 'icon';
+  const icon = canUseNerdFont && metaOn(w, 'nerdFont') ? '' : 'v';
   const letter = 'N';
   switch (format) {
     case 'icon-letter':
@@ -233,20 +245,63 @@ function vim(w: Widget): string {
   }
 }
 
-function statusWidget(w: Widget, emoji: string): string {
-  if (raw(w)) return 'on';
-  const format = meta(w, 'format') ?? 'icon';
+function voiceStatus(w: Widget): string {
+  const configured = meta(w, 'format');
+  const format = ['icon', 'icon-text', 'text', 'word'].includes(
+    configured ?? ''
+  )
+    ? configured!
+    : 'icon';
+  const canUseNerdFont =
+    format === 'icon' || (format === 'icon-text' && !raw(w));
+  const nerdFont = canUseNerdFont && metaOn(w, 'nerdFont');
+  const icon = nerdFont ? '' : '🎤';
   const stateDot = '◉';
   switch (format) {
+    case 'icon':
+      return nerdFont ? icon : raw(w) ? stateDot : `${icon} ${stateDot}`;
     case 'icon-text':
-      return `${emoji} on`;
+      return raw(w) ? 'on' : `${icon} on`;
     case 'text':
       return 'on';
     case 'word':
-      return 'on';
-    default:
-      return `${emoji} ${stateDot}`; // icon
+      return raw(w) ? 'on' : 'voice on';
   }
+  return nerdFont ? icon : raw(w) ? stateDot : `${icon} ${stateDot}`;
+}
+
+function remoteStatus(w: Widget): string {
+  const configured = meta(w, 'format');
+  const format = [
+    'icon',
+    'icon-text',
+    'text',
+    'word',
+    'label-check',
+    'label-mark'
+  ].includes(configured ?? '')
+    ? configured!
+    : 'icon';
+  const canUseNerdFont =
+    format === 'icon' || (format === 'icon-text' && !raw(w));
+  const nerdFont = canUseNerdFont && metaOn(w, 'nerdFont');
+  const icon = nerdFont ? '' : '📡';
+  const stateDot = '◉';
+  switch (format) {
+    case 'icon':
+      return nerdFont ? icon : raw(w) ? stateDot : `${icon} ${stateDot}`;
+    case 'icon-text':
+      return raw(w) ? 'on' : `${icon} on`;
+    case 'text':
+      return 'on';
+    case 'word':
+      return raw(w) ? 'on' : 'remote on';
+    case 'label-check':
+      return raw(w) ? '✅' : 'remote ✅';
+    case 'label-mark':
+      return raw(w) ? '✓' : 'remote ✓';
+  }
+  return nerdFont ? icon : raw(w) ? stateDot : `${icon} ${stateDot}`;
 }
 
 function sandboxStatus(w: Widget): string {
@@ -391,9 +446,9 @@ export function previewText(w: Widget): string | null {
     case 'vim-mode':
       return vim(w);
     case 'voice-status':
-      return statusWidget(w, '🎤');
+      return voiceStatus(w);
     case 'remote-control-status':
-      return statusWidget(w, '📡');
+      return remoteStatus(w);
     case 'sandbox-status':
       return sandboxStatus(w);
     case 'cache-timer':

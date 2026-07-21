@@ -276,6 +276,63 @@ describe('ccstatusline v2.2.22 alignment fixes', () => {
     expect(voiceVals).toEqual(['icon', 'icon-text', 'text', 'word']);
   });
 
+  it('status widgets expose Nerd Font only while their selected format renders an icon', () => {
+    const vimNerd = opt('vim-mode', 'nerdFont');
+    for (const format of ['icon-dash-letter', 'icon-letter', 'icon'])
+      expect(
+        vimNerd.showIf!(w('vim-mode', { metadata: { format } })),
+        `vim ${format}`
+      ).toBe(true);
+    for (const format of ['letter', 'word'])
+      expect(
+        vimNerd.showIf!(w('vim-mode', { metadata: { format } })),
+        `vim ${format}`
+      ).toBe(false);
+
+    for (const type of ['voice-status', 'remote-control-status']) {
+      const nerd = opt(type, 'nerdFont');
+      expect(nerd.showIf!(w(type))).toBe(true);
+      expect(nerd.showIf!(w(type, { rawValue: true }))).toBe(true);
+      expect(nerd.showIf!(w(type, { metadata: { format: 'icon-text' } }))).toBe(
+        true
+      );
+      expect(
+        nerd.showIf!(
+          w(type, {
+            rawValue: true,
+            metadata: { format: 'icon-text', nerdFont: 'true' }
+          })
+        )
+      ).toBe(false);
+      for (const format of ['text', 'word'])
+        expect(
+          nerd.showIf!(w(type, { metadata: { format } })),
+          `${type} ${format}`
+        ).toBe(false);
+      if (type === 'remote-control-status')
+        for (const format of ['label-check', 'label-mark'])
+          expect(
+            nerd.showIf!(w(type, { metadata: { format } })),
+            `${type} ${format}`
+          ).toBe(false);
+    }
+  });
+
+  it('format changes clear stale Nerd Font metadata exactly when the target cannot use it', () => {
+    const vimFormat = opt('vim-mode', 'format');
+    expect(vimFormat.clearsMetaIf!(w('vim-mode'), 'icon')).toBe(false);
+    expect(vimFormat.clearsMetaIf!(w('vim-mode'), 'word')).toBe(true);
+
+    for (const type of ['voice-status', 'remote-control-status']) {
+      const format = opt(type, 'format');
+      expect(format.clearsMetaIf!(w(type), 'icon-text')).toBe(false);
+      expect(
+        format.clearsMetaIf!(w(type, { rawValue: true }), 'icon-text')
+      ).toBe(true);
+      expect(format.clearsMetaIf!(w(type), 'word')).toBe(true);
+    }
+  });
+
   it('#6 compaction-counter: nerdFont is visible only in the default format, switching format clears nerdFont', () => {
     const nerd = opt('compaction-counter', 'nerdFont');
     expect(nerd.showIf!(w('compaction-counter'))).toBe(true);

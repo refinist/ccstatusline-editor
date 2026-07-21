@@ -1,6 +1,5 @@
 // Declarative per-widget capability table, derived from a full audit of
-// ccstatusline v2.2.23 widget sources plus the v2.2.24 widget additions. Each
-// widget's *type-specific* operations
+// ccstatusline v2.2.24 widget sources. Each widget's *type-specific* operations
 // (the things the TUI exposes as per-widget hotkeys / sub-editors) are described
 // here as control descriptors, so the Inspector renders one data-driven panel
 // for all 86 non-layout widgets instead of 86 hand-written forms.
@@ -81,6 +80,8 @@ export interface WidgetOption {
    * that one "keep" value to get that behavior.
    */
   clearsMetaExceptValue?: string;
+  /** Enum only: clear sibling metadata when this predicate matches the target value. */
+  clearsMetaIf?: (w: Widget, value: string) => boolean;
   /**
    * Toggle-off behavior. ccstatusline's shared `toggleMetadataFlag` helper —
    * used by most of its toggles — writes the literal string 'false' on off
@@ -351,7 +352,8 @@ const timer = (
 
 const formatNerd = (
   formatOptions: WoEnumOption[],
-  defaultFormat: string
+  defaultFormat: string,
+  canUseNerdFont: (w: Widget, format: string) => boolean
 ): WidgetOption[] => [
   {
     id: 'format',
@@ -359,19 +361,44 @@ const formatNerd = (
     metaKey: 'format',
     options: formatOptions,
     defaultValue: defaultFormat,
+    clearsMeta: ['nerdFont'],
+    clearsMetaIf: (w, value) => !canUseNerdFont(w, value),
     // The format family's counts straddle ENUM_INLINE_MAX (vim 5 / status 4 /
     // remote 6) — force the dropdown so all three widgets present the same way.
     select: true
   },
-  { id: 'nerdFont', control: 'toggle', metaKey: 'nerdFont', deleteOnOff: true }
+  {
+    id: 'nerdFont',
+    control: 'toggle',
+    metaKey: 'nerdFont',
+    deleteOnOff: true,
+    showIf: w => {
+      const configured = w.metadata?.format;
+      const format = formatOptions.some(o => o.value === configured)
+        ? configured!
+        : defaultFormat;
+      return canUseNerdFont(w, format);
+    }
+  }
 ];
+
+const vimCanUseNerdFont = (_w: Widget, format: string) =>
+  format === 'icon-dash-letter' ||
+  format === 'icon-letter' ||
+  format === 'icon';
+const statusCanUseNerdFont = (w: Widget, format: string) =>
+  format === 'icon' || (format === 'icon-text' && !w.rawValue);
 
 // ── the table ──────────────────────────────────────────────────────────────
 export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
   // Core
-  'vim-mode': formatNerd(VIM_FORMAT, 'icon-dash-letter'),
-  'voice-status': formatNerd(STATUS_FORMAT, 'icon'),
-  'remote-control-status': formatNerd(REMOTE_STATUS_FORMAT, 'icon'),
+  'vim-mode': formatNerd(VIM_FORMAT, 'icon-dash-letter', vimCanUseNerdFont),
+  'voice-status': formatNerd(STATUS_FORMAT, 'icon', statusCanUseNerdFont),
+  'remote-control-status': formatNerd(
+    REMOTE_STATUS_FORMAT,
+    'icon',
+    statusCanUseNerdFont
+  ),
   'sandbox-status': [
     {
       id: 'format',

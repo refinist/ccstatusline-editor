@@ -213,8 +213,9 @@ function setEnum(o: WidgetOption, value: string) {
   }
   // Normally clearsMeta fires on a non-default pick; clearsMetaExceptValue swaps
   // that for "fires whenever the target isn't this one value" (see its doc).
-  const shouldClear =
-    o.clearsMetaExceptValue !== undefined
+  const shouldClear = o.clearsMetaIf
+    ? o.clearsMetaIf(w.value!, value)
+    : o.clearsMetaExceptValue !== undefined
       ? value !== o.clearsMetaExceptValue
       : !isDefault;
   const clears = [

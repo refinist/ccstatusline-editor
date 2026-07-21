@@ -40,6 +40,7 @@ import {
   PopoverContent,
   PopoverTrigger
 } from '@/components/ui/popover';
+import { appVersion } from '@/lib/appVersion';
 import { resolveSharedConfig } from '@/lib/shareConfig';
 import { useConfigStore } from '@/stores/config';
 import { usePendingTemplateStore } from '@/stores/pendingTemplate';
@@ -83,7 +84,6 @@ watch(smUp, up => {
 
 // Version number next to the title (mirrors ccstatusline's title "| v…"
 // structure); links to the upstream repo the version is tracking.
-const version = '2.2.23';
 const CCSTATUSLINE_REPO_URL = 'https://github.com/sirmalloc/ccstatusline';
 
 // ── Title easter egg ─────────────────────────────────────────────────────────
@@ -254,7 +254,7 @@ onMounted(async () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              v{{ version }}
+              v{{ appVersion }}
             </a>
           </span>
         </h1>

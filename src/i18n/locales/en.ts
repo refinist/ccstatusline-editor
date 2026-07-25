@@ -411,6 +411,7 @@ export default {
     'extra-usage-used': 'Extra Usage Used',
     'weekly-sonnet-usage': 'Weekly Sonnet Usage',
     'weekly-opus-usage': 'Weekly Opus Usage',
+    'fable-weekly-usage': 'Weekly Fable Usage',
     'reset-timer': 'Block Reset Timer',
     'weekly-reset-timer': 'Weekly Reset Timer',
     'context-bar': 'Context Bar',
@@ -517,6 +518,8 @@ export default {
       'Shows USD spent on extra usage (pay-as-you-go overage)',
     'weekly-sonnet-usage': 'Shows weekly Sonnet API usage percentage',
     'weekly-opus-usage': 'Shows weekly Opus API usage percentage',
+    'fable-weekly-usage':
+      'Shows Fable-only weekly usage percentage; renders nothing when the account has no Fable window',
     'reset-timer': 'Shows time remaining until current 5hr block reset window',
     'weekly-reset-timer': 'Shows time remaining until weekly usage reset',
     'context-bar': 'Shows context usage as a progress bar',

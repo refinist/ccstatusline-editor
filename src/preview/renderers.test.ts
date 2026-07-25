@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { renderWidget } from '@/preview/renderers';
+import {
+  isSpacingSeparator,
+  renderWidget,
+  separatorBoundary
+} from '@/preview/renderers';
 import type { Widget } from '@/widgets';
 
 const w = (type: string, extra: Partial<Widget> = {}): Widget => ({
@@ -121,6 +125,63 @@ describe('renderWidget — color depth downgrade (colorLevel)', () => {
       { colorLevel: 0 }
     )[0];
     expect(tok.style?.backgroundColor).toBeUndefined();
+  });
+});
+
+// Mirrors ccstatusline v2.2.26's separator ownership rules (#525): the separator that
+// follows spacing swallows it, and a separator that has no boundary of its own to own
+// isn't rendered at all.
+describe('separatorBoundary / isSpacingSeparator', () => {
+  const line = (...types: (string | Widget)[]): Widget[] =>
+    types.map((t, i) =>
+      typeof t === 'string' ? { id: `w${i}`, type: t } : { ...t, id: `w${i}` }
+    );
+  const sep = (character?: string): Widget => ({
+    id: 'sep',
+    type: 'separator',
+    ...(character === undefined ? {} : { character })
+  });
+
+  it('a blank character makes a separator spacing-only; anything visible does not', () => {
+    expect(isSpacingSeparator(sep(' '))).toBe(true);
+    expect(isSpacingSeparator(sep(''))).toBe(true);
+    expect(isSpacingSeparator(sep('|'))).toBe(false);
+    expect(isSpacingSeparator(sep())).toBe(false); // no character falls back to '|'
+    expect(isSpacingSeparator(w('model'))).toBe(false);
+    expect(isSpacingSeparator(undefined)).toBe(false);
+  });
+
+  it('sits behind the widget before it', () => {
+    const l = line('model', sep('|'), 'git-branch');
+    expect(separatorBoundary(l, 1)).toEqual({
+      inheritFrom: l[0],
+      replacesSpacing: false
+    });
+  });
+
+  it('takes over from the spacing before it, reaching back to the real widget', () => {
+    const l = line('model', sep(' '), sep('|'), 'git-branch');
+    expect(separatorBoundary(l, 2)).toEqual({
+      inheritFrom: l[0],
+      replacesSpacing: true
+    });
+  });
+
+  it('collapses consecutive spacing separators into the last one', () => {
+    const l = line('model', sep(' '), sep(' '), 'git-branch');
+    expect(separatorBoundary(l, 2)?.replacesSpacing).toBe(true);
+  });
+
+  it('is dropped when a visible separator already owns the boundary', () => {
+    expect(separatorBoundary(line('model', sep(':'), sep('|')), 2)).toBeNull();
+    expect(separatorBoundary(line('model', sep(':'), sep(' ')), 2)).toBeNull();
+  });
+
+  it('is dropped at the start of a line and across a flex separator', () => {
+    expect(separatorBoundary(line(sep('|'), 'model'), 0)).toBeNull();
+    expect(
+      separatorBoundary(line('model', 'flex-separator', sep('|')), 2)
+    ).toBeNull();
   });
 });
 

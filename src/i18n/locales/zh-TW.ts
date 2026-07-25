@@ -397,6 +397,7 @@ export default {
     'extra-usage-used': '額外用量已用',
     'weekly-sonnet-usage': '每週Sonnet用量',
     'weekly-opus-usage': '每週Opus用量',
+    'fable-weekly-usage': '每週Fable用量',
     'reset-timer': '區塊重置倒數計時',
     'weekly-reset-timer': '每週重置倒數計時',
     'context-bar': '上下文進度條',
@@ -487,6 +488,8 @@ export default {
     'extra-usage-used': '按量計費額外用量已花費(美元)',
     'weekly-sonnet-usage': '每週 Sonnet API 用量百分比',
     'weekly-opus-usage': '每週 Opus API 用量百分比',
+    'fable-weekly-usage':
+      '每週 Fable API 用量百分比,帳號沒有 Fable 視窗時不顯示',
     'reset-timer': '距目前5小時區塊重置剩餘時間',
     'weekly-reset-timer': '距每週用量重置剩餘時間',
     'context-bar': '以進度條展示上下文用量',

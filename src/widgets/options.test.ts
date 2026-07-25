@@ -104,6 +104,14 @@ describe('ccstatusline v2.2.24 widget options', () => {
   });
 });
 
+describe('ccstatusline v2.2.26 widget options', () => {
+  it('fable-weekly-usage carries the same option set as the other per-model weekly widgets', () => {
+    expect(optionsFor('fable-weekly-usage').map(o => o.id)).toEqual(
+      optionsFor('weekly-opus-usage').map(o => o.id)
+    );
+  });
+});
+
 describe('showIf conditional visibility', () => {
   it('timer: bar-family controls (invert) show only in progress-bar mode', () => {
     const invert = opt('reset-timer', 'invert');
@@ -355,7 +363,8 @@ describe('ccstatusline v2.2.22 alignment fixes', () => {
       'session-usage',
       'weekly-usage',
       'weekly-sonnet-usage',
-      'weekly-opus-usage'
+      'weekly-opus-usage',
+      'fable-weekly-usage'
     ])
       expect(ids(t), t).toContain('cursor');
   });

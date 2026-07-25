@@ -481,3 +481,38 @@ describe('previewText — ccstatusline v2.2.24 widgets', () => {
     ).toBe('Cache: 4:52');
   });
 });
+
+describe('previewText — ccstatusline v2.2.26 widgets', () => {
+  it('fable-weekly-usage keeps upstream\'s "Fable Weekly: " label and 4% sample', () => {
+    expect(previewText(w('fable-weekly-usage'))).toBe('Fable Weekly: 4.0%');
+    expect(previewText(w('fable-weekly-usage', { rawValue: true }))).toBe(
+      '4.0%'
+    );
+  });
+
+  it('fable-weekly-usage shares the usage-percentage display modes', () => {
+    // 4% rounds down to an empty slider; inverting it (remaining) fills the whole bar.
+    expect(
+      previewText(
+        w('fable-weekly-usage', { metadata: { display: 'slider-only' } })
+      )
+    ).toBe('Fable Weekly: ░░░░░░░░░░');
+    expect(
+      previewText(
+        w('fable-weekly-usage', {
+          metadata: { display: 'slider-only', invert: 'true' }
+        })
+      )
+    ).toBe('Fable Weekly: ▓▓▓▓▓▓▓▓▓▓');
+    expect(
+      previewText(w('fable-weekly-usage', { metadata: { invert: 'true' } }))
+    ).toBe('Fable Weekly: 96.0%');
+    expect(
+      previewText(
+        w('fable-weekly-usage', {
+          metadata: { display: 'slider-only', cursor: 'true' }
+        })
+      )
+    ).toBe('Fable Weekly: ░░░░░│░░░░');
+  });
+});

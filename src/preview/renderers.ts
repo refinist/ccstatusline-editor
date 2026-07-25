@@ -118,6 +118,48 @@ export function splitBars(
   return out;
 }
 
+// A separator that renders as blank: it only opens up space, so it never owns the
+// boundary between two widgets. A character-less separator resolves to '|' here, the
+// same fallback previewText uses — ccstatusline falls back to `defaultSeparator`
+// instead, but the editor keeps that setting and manual separators mutually
+// exclusive, so the two can't disagree in a reachable config.
+export function isSpacingSeparator(w: Widget | undefined): boolean {
+  return w?.type === 'separator' && (w.character ?? '|').trim().length === 0;
+}
+
+export interface SeparatorBoundary {
+  /** Widget the separator sits behind — the one it inherits colors from. */
+  inheritFrom: Widget;
+  /** Spacing separators right before it are swallowed by this separator. */
+  replacesSpacing: boolean;
+}
+
+// Resolve which widget a manually placed `separator` at `index` sits behind, mirroring
+// ccstatusline v2.2.26's backward walk (renderStatusLine): spacing-only separators are
+// transparent — the separator that follows them takes over the boundary and swallows
+// the spacing — while a visible separator or a flex-separator already owns that
+// boundary, which drops this separator entirely (null). ccstatusline also looks past
+// widgets that rendered empty, but the preview has no empty widgets (every widget shows
+// sample output), so that branch can't be reached here.
+export function separatorBoundary(
+  line: Widget[],
+  index: number
+): SeparatorBoundary | null {
+  let replacesSpacing = false;
+  for (let j = index - 1; j >= 0; j--) {
+    const prev = line[j];
+    if (!prev) continue;
+    if (prev.type === 'separator') {
+      if (!isSpacingSeparator(prev)) return null;
+      replacesSpacing = true;
+      continue;
+    }
+    if (prev.type === 'flex-separator') return null;
+    return { inheritFrom: prev, replacesSpacing };
+  }
+  return null;
+}
+
 // Resolves how the *auto-inserted* default separator (a plain string, not a widget
 // instance) should be styled — mirrors ccstatusline's applyColorsWithOverride call
 // for it: global fg/bg/bold overrides always win; short of that, with
@@ -180,11 +222,7 @@ export function renderWidget(
   }
   // A "space" separator is invisible — while editing show a visible "space" placeholder
   // (same muted style as the flex hint); the preview keeps the real space character.
-  if (
-    w.type === 'separator' &&
-    mode === 'editor' &&
-    (w.character ?? '|').trim() === ''
-  ) {
+  if (mode === 'editor' && isSpacingSeparator(w)) {
     return [{ text: 'space', cls: 'text-zinc-500 italic' }];
   }
 

@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
 
-// AUTO-GENERATED widget catalog mirroring ccstatusline v2.2.24 (all 88 widgets).
+// AUTO-GENERATED widget catalog mirroring ccstatusline v2.2.26 (all 89 widgets).
 // type     : registry key
 // category : matches ccstatusline ADD WIDGET menu
 // color    : ccstatusline ANSI default color name (mapped to a tailwind class for preview)
@@ -370,6 +370,12 @@ export const WIDGETS: WidgetMeta[] = [
     preview: 'Weekly Opus: 4.0%'
   },
   {
+    type: 'fable-weekly-usage',
+    category: 'Usage',
+    color: 'brightBlue',
+    preview: 'Fable Weekly: 4.0%'
+  },
+  {
     type: 'reset-timer',
     category: 'Usage',
     color: 'brightBlue',
@@ -454,7 +460,7 @@ export const WIDGET_BY_TYPE: Map<string, WidgetMeta> = new Map(
 
 /**
  * A widget instance placed on a status line.
- * Field set mirrors ccstatusline's WidgetItem (v2.2.24) so the emitted JSON
+ * Field set mirrors ccstatusline's WidgetItem (v2.2.26) so the emitted JSON
  * is consumed verbatim by the real ccstatusline renderer.
  */
 export interface Widget {

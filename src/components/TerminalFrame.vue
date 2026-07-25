@@ -3,7 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import PowerlineGlyph from '@/components/PowerlineGlyph.vue';
 import { renderPowerlineLines, type PowerlineItem } from '@/preview/powerline';
 import {
+  isSpacingSeparator,
   renderWidget,
+  separatorBoundary,
   separatorToken,
   type RenderGlobals
 } from '@/preview/renderers';
@@ -91,9 +93,12 @@ const plLines = computed<PowerlineItem[][] | null>(() =>
 
 // Flatten a line into render items, interleaving the default separator and tagging
 // flex-separators so the template can render them as growing spacers. Manually-placed
-// "separator" widgets that don't set their own color/background get the same
-// inheritSeparatorColors treatment, resolved here into an effective widget so
-// renderWidget's normal color/bold/dim pipeline just picks it up.
+// "separator" widgets go through separatorBoundary() to find the widget they sit
+// behind: one that has no boundary to own isn't rendered at all, and when it takes
+// over from spacing separators those are dropped from the items already emitted.
+// A separator without its own color/background then gets the inheritSeparatorColors
+// treatment, resolved here into an effective widget so renderWidget's normal
+// color/bold/dim pipeline just picks it up.
 function renderLine(line: Widget[]) {
   const items: {
     kind: 'widget' | 'sep' | 'flex';
@@ -117,24 +122,25 @@ function renderLine(line: Widget[]) {
     }
     if (w.type === 'flex-separator') {
       items.push({ kind: 'flex', key: w.id });
-    } else if (
-      w.type === 'separator' &&
-      inheritSepColors.value &&
-      !w.color &&
-      !w.backgroundColor &&
-      prev &&
-      !isStruct(prev.type)
-    ) {
-      const prevColor = prev.color ?? WIDGET_BY_TYPE.get(prev.type)?.color;
+    } else if (w.type === 'separator') {
+      const boundary = separatorBoundary(line, i);
+      if (!boundary) return;
+      if (boundary.replacesSpacing) {
+        while (isSpacingSeparator(items[items.length - 1]?.w)) items.pop();
+      }
+      const from = boundary.inheritFrom;
+      const inherit = inheritSepColors.value && !w.color && !w.backgroundColor;
       items.push({
         kind: 'widget',
-        w: {
-          ...w,
-          color: prevColor,
-          backgroundColor: prev.backgroundColor,
-          bold: prev.bold,
-          dim: prev.dim
-        },
+        w: inherit
+          ? {
+              ...w,
+              color: from.color ?? WIDGET_BY_TYPE.get(from.type)?.color,
+              backgroundColor: from.backgroundColor,
+              bold: from.bold,
+              dim: from.dim
+            }
+          : w,
         key: w.id
       });
     } else {

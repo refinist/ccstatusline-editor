@@ -1,4 +1,4 @@
-// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.24).
+// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.26).
 // Given a widget instance, returns the exact text the terminal would show in
 // preview mode for the current options (rawValue, display mode, format, glyph
 // override, cwd style, etc.). Returns null for widgets whose preview never
@@ -120,6 +120,9 @@ const USAGE_PCT: Record<string, [string, number, boolean]> = {
   'weekly-usage': ['Weekly: ', 12, true],
   'weekly-sonnet-usage': ['Weekly Sonnet: ', 8, true],
   'weekly-opus-usage': ['Weekly Opus: ', 4, true],
+  // Upstream's label really is "Fable Weekly: " while the widget is named
+  // "Weekly Fable Usage" — mirror the inconsistency rather than normalizing it.
+  'fable-weekly-usage': ['Fable Weekly: ', 4, true],
   'extra-usage-utilization': ['Overage: ', 2.6, false]
 };
 

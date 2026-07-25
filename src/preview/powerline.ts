@@ -1,5 +1,5 @@
 // Powerline-mode preview rendering — a faithful port of ccstatusline's
-// renderPowerlineStatusLine (utils/renderer.ts, v2.2.24) to the web preview.
+// renderPowerlineStatusLine (utils/renderer.ts, v2.2.26) to the web preview.
 //
 // In powerline mode ccstatusline abandons the normal separator pipeline:
 //   - manual `separator` widgets are filtered out (they still break `merge`)

@@ -4,7 +4,7 @@ import { createI18n } from 'vue-i18n';
 import { renderToString } from 'vue/server-renderer';
 import TerminalPreview from '@/components/TerminalPreview.vue';
 import en from '@/i18n/locales/en';
-import { emptyConfig } from '@/widgets';
+import { emptyConfig, type Widget } from '@/widgets';
 
 // SSR smoke test: renders the powerline preview all the way from config to real DOM
 // markup (inline color styles + SVG arrow shapes), ensuring the component's wiring
@@ -62,6 +62,62 @@ describe('TerminalPreview — powerline SSR smoke test', () => {
     const html = await renderPreview(cfg);
     expect(html).not.toContain('<svg');
     expect(html).toContain('Model: Claude');
+  });
+});
+
+// ccstatusline v2.2.26 (#525) reworked which manual separator owns the boundary
+// between two widgets; these run the rules through the real component.
+describe('TerminalPreview — manual separator ownership', () => {
+  const line = (...ws: Widget[]) => {
+    const cfg = emptyConfig();
+    cfg.lines[0] = ws;
+    return cfg;
+  };
+  const sep = (id: string, character: string): Widget => ({
+    id,
+    type: 'separator',
+    character
+  });
+
+  it('a separator following spacing swallows it', async () => {
+    const html = await renderPreview(
+      line({ id: 'a', type: 'model' }, sep('s1', ' '), sep('s2', '|'), {
+        id: 'b',
+        type: 'git-branch'
+      })
+    );
+    expect(visibleText(html)).toContain('Model: Claude | ⎇ main');
+  });
+
+  it('a separator is dropped when a visible separator already owns the boundary', async () => {
+    const html = await renderPreview(
+      line({ id: 'a', type: 'model' }, sep('s1', ':'), sep('s2', '|'), {
+        id: 'b',
+        type: 'git-branch'
+      })
+    );
+    expect(visibleText(html)).toContain('Model: Claude:⎇ main');
+  });
+
+  it('a leading separator renders nothing', async () => {
+    const html = await renderPreview(
+      line(sep('s1', '|'), { id: 'a', type: 'model' })
+    );
+    expect(visibleText(html)).not.toContain('|');
+  });
+
+  it('inherited separator colors come from the widget behind the spacing', async () => {
+    const cfg = line(
+      { id: 'a', type: 'model', color: 'hex:ff0000' },
+      sep('s1', ' '),
+      sep('s2', '|'),
+      { id: 'b', type: 'git-branch' }
+    );
+    cfg.inheritSeparatorColors = true;
+    cfg.colorLevel = 3;
+
+    const html = await renderPreview(cfg);
+    expect(html.match(/#ff0000/g)?.length).toBe(2); // the widget plus its separator
   });
 });
 

@@ -1,8 +1,8 @@
 // Declarative per-widget capability table, derived from a full audit of
-// ccstatusline v2.2.24 widget sources. Each widget's *type-specific* operations
+// ccstatusline v2.2.26 widget sources. Each widget's *type-specific* operations
 // (the things the TUI exposes as per-widget hotkeys / sub-editors) are described
 // here as control descriptors, so the Inspector renders one data-driven panel
-// for all 86 non-layout widgets instead of 86 hand-written forms.
+// for all 87 non-layout widgets instead of 87 hand-written forms.
 //
 // Universal operations (color / background / bold / dim / rawValue / merge /
 // clone / delete) are NOT listed here — the Inspector renders those for every
@@ -688,6 +688,7 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
   'weekly-usage': usagePct(),
   'weekly-sonnet-usage': usagePct(),
   'weekly-opus-usage': usagePct(),
+  'fable-weekly-usage': usagePct(),
   'extra-usage-utilization': [
     ...usagePct({ cursor: false }),
     toggleMeta('hideIfDisabled', 'hideIfDisabled')

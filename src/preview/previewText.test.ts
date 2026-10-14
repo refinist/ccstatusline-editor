@@ -126,13 +126,13 @@ describe('previewText — compaction counter (v2.2.23)', () => {
           metadata: { showReclaimed: 'true', symbolReclaimed: '' }
         })
       )
-    ).toBe('↻ 2 120k');
+    ).toBe('↻ 2 120.0k');
   });
   it.each([
     ['auto', '1'],
     ['manual', '1'],
     ['unknown', '0'],
-    ['reclaimed', '120k']
+    ['reclaimed', '120.0k']
   ])('metric=%s renders the bare value %s', (metric, out) => {
     expect(previewText(w('compaction-counter', { metadata: { metric } }))).toBe(
       out
@@ -175,7 +175,7 @@ describe('previewText — custom widgets', () => {
 
 describe('previewText — fallback', () => {
   it('a static widget with no options returns null (the caller falls back to the catalog default)', () => {
-    expect(previewText(w('git-changes'))).toBeNull();
+    expect(previewText(w('git-changes'))).toBe('(+42,-10)');
   });
 });
 
@@ -214,7 +214,7 @@ describe('previewText — progress bar / slider display modes', () => {
     ).toBe('Ctx Used: ▓░░░░░░░░░ 9.3%');
     expect(
       previewText(w('context-percentage', { metadata: { inverse: 'true' } }))
-    ).toBe('Ctx Used: 90.7%');
+    ).toBe('Ctx Left: 90.7%');
   });
 });
 
@@ -238,9 +238,9 @@ describe('previewText — cwd path styles', () => {
     expect(cwd({ metadata: { abbreviateHome: 'true', segments: '2' } })).toBe(
       'cwd: ~/.../Projects/my-project'
     );
-    expect(cwd({ metadata: { segments: '1' } })).toBe('cwd: .../project');
+    expect(cwd({ metadata: { segments: '1' } })).toBe('cwd: .../my-project');
     expect(cwd({ metadata: { segments: '2' } })).toBe(
-      'cwd: .../example/project'
+      'cwd: .../Projects/my-project'
     );
   });
 });
@@ -391,7 +391,7 @@ describe('previewText — format / symbol options', () => {
       previewText(
         w('compaction-counter', { metadata: { showReclaimed: 'true' } })
       )
-    ).toBe('↻ 2 ↓120k');
+    ).toBe('↻ 2 ↓120.0k');
   });
   it('git-ahead-behind / git-status: custom symbols', () => {
     expect(previewText(w('git-ahead-behind'))).toBe('↑2↓3');
@@ -414,16 +414,14 @@ describe('previewText — format / symbol options', () => {
   });
   it('git-review: hide switches', () => {
     expect(previewText(w('git-review'))).toBe('PR #42 OPEN Example PR title');
+    expect(previewText(w('git-review', { metadata: { hide: 'status' } }))).toBe(
+      'PR #42 Example PR title'
+    );
+    expect(previewText(w('git-review', { metadata: { hide: 'title' } }))).toBe(
+      'PR #42 OPEN'
+    );
     expect(
-      previewText(w('git-review', { metadata: { hideStatus: 'true' } }))
-    ).toBe('PR #42 Example PR title');
-    expect(
-      previewText(w('git-review', { metadata: { hideTitle: 'true' } }))
-    ).toBe('PR #42 OPEN');
-    expect(
-      previewText(
-        w('git-review', { metadata: { hideStatus: 'true', hideTitle: 'true' } })
-      )
+      previewText(w('git-review', { metadata: { hide: 'status,title' } }))
     ).toBe('PR #42');
   });
   it('git-origin-owner-repo shows only owner when it is a fork', () => {

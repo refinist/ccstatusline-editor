@@ -142,6 +142,11 @@ export default {
     mergeNoPad: 'No-pad',
     noAlign: 'Exclude from auto-align',
     hide: 'Hide this widget',
+    label: 'Label',
+    numberFormat: 'Number format',
+    numberStyle: 'Style',
+    decimals: 'Decimals',
+    groupHide: 'Hide when',
     clone: 'Clone',
     delete: 'Delete',
     resetDefaults: 'Restore defaults',
@@ -204,6 +209,24 @@ export default {
     plAutoAlign: 'Auto-align into columns',
     plContinue: 'Continue theme across lines',
     gitCacheTtl: 'Git cache (s)',
+    terminalWidthCacheTtl: 'Width probe cache (s)',
+    customCommandCacheTtl: 'Command cache (s)',
+    numberFormat: {
+      title: 'Number format',
+      decimals: 'decimals',
+      kind: {
+        token: 'Tokens',
+        speed: 'Speed',
+        percent: 'Percent',
+        memory: 'Memory',
+        cost: 'Cost'
+      },
+      style: {
+        default: 'Precise',
+        compact: 'Compact',
+        whole: 'Whole'
+      }
+    },
     refreshInterval: 'Refresh interval (s)',
     ph: { none: 'none', default: 'default' },
     groupEditor: 'Editor preferences',
@@ -277,6 +300,44 @@ export default {
     symbolDraining: 'Draining symbol',
     symbolUrgent: 'Urgent symbol',
     symbolCold: 'Cold symbol',
+    symbolInsertions: 'Insertions symbol',
+    symbolDeletions: 'Deletions symbol',
+    symbolClean: 'Clean symbol',
+    symbolDirty: 'Dirty symbol',
+    zeroDisplay: 'When zero',
+    history: '48h incident history',
+    clockTime: 'Use clock time',
+    weekdaysOnly: 'Weekdays only',
+    hide: {
+      noGit: 'Not in a git repo',
+      noJj: 'Not in a jj repo',
+      noRemote: 'No remote',
+      noUpstream: 'No upstream',
+      notFork: 'Not a fork',
+      status: 'Status segment',
+      title: 'Title segment',
+      disabled: 'Extra usage disabled',
+      noData: 'No usage data',
+      noChecks: 'No CI data',
+      noPr: 'No PR/MR',
+      noSpeed: 'No speed data',
+      noBlock: 'No active block',
+      empty: 'Empty',
+      zero: 'Zero',
+      zeroChanges: 'No changes',
+      zeroInsertions: 'No insertions',
+      zeroDeletions: 'No deletions',
+      zeroStagedFiles: 'No staged files',
+      zeroUnstagedFiles: 'No unstaged files',
+      zeroUntrackedFiles: 'No untracked files',
+      zeroConflicts: 'No conflicts',
+      zeroTokens: 'Token count is zero',
+      zeroCost: 'Cost is $0.00',
+      zeroClock: 'Under 1 minute',
+      zeroAhead: 'Not diverged (↑0↓0)',
+      defaultValue: "Style is 'default'",
+      mergeTarget: 'Merge target is hidden'
+    },
     url: 'URL',
     linkText: 'Link text',
     customText: 'Text',
@@ -316,6 +377,8 @@ export default {
       totalCount: 'Total count',
       uniqueList: 'Unique list',
       none: 'None',
+      conflictCount: 'Count',
+      conflictClean: 'Clean glyph',
       vscode: 'VS Code',
       cursor: 'Cursor',
       pipe: "{'|'}",
@@ -393,6 +456,7 @@ export default {
     'context-percentage-usable': 'Context % (usable)',
     'session-clock': 'Session Clock',
     'session-cost': 'Session Cost',
+    'session-cost-rate': 'Session Cost Rate',
     'block-timer': 'Block Timer',
     'terminal-width': 'Terminal Width',
     version: 'Version',
@@ -402,6 +466,7 @@ export default {
     link: 'Link',
     'claude-session-id': 'Claude Session ID',
     'claude-account-email': 'Claude Account Email',
+    'claude-status': 'Claude Status',
     'session-name': 'Session Name',
     'free-memory': 'Memory Usage',
     'session-usage': 'Session Usage',
@@ -409,6 +474,7 @@ export default {
     'extra-usage-utilization': 'Extra Usage Utilization',
     'extra-usage-remaining': 'Extra Usage Remaining',
     'extra-usage-used': 'Extra Usage Used',
+    'extra-usage-daily-budget': 'Extra Usage Daily Budget',
     'weekly-sonnet-usage': 'Weekly Sonnet Usage',
     'weekly-opus-usage': 'Weekly Opus Usage',
     'fable-weekly-usage': 'Weekly Fable Usage',
@@ -495,6 +561,8 @@ export default {
       'Shows percentage of usable context window used or remaining (80% of max before auto-compact)',
     'session-clock': 'Shows elapsed time since current session started',
     'session-cost': 'Shows the total session cost in USD',
+    'session-cost-rate':
+      'Shows the session cost per hour, over the time Claude spent working or the whole session',
     'block-timer': 'Shows current 5hr block elapsed time or progress',
     'terminal-width': 'Shows current terminal width in columns',
     version: 'Shows Claude Code CLI version number',
@@ -505,6 +573,8 @@ export default {
     'claude-session-id': 'Shows the current Claude Code session ID',
     'claude-account-email':
       'Displays the email of the currently logged-in Claude account',
+    'claude-status':
+      'Shows Claude service status from status.claude.com, with an optional 48-hour incident history strip',
     'session-name':
       'Shows the session name set via /rename command in Claude Code',
     'free-memory': 'Shows system memory usage (used/total)',
@@ -516,6 +586,8 @@ export default {
       'Shows remaining USD of your monthly extra usage limit',
     'extra-usage-used':
       'Shows USD spent on extra usage (pay-as-you-go overage)',
+    'extra-usage-daily-budget':
+      "Shows what's left of the monthly extra usage limit per remaining day, optionally counting weekdays only",
     'weekly-sonnet-usage': 'Shows weekly Sonnet API usage percentage',
     'weekly-opus-usage': 'Shows weekly Opus API usage percentage',
     'fable-weekly-usage':
@@ -794,7 +866,7 @@ export default {
       },
       flexMode: {
         q: 'What do flexMode and compactThreshold actually do?',
-        a: 'flexMode controls how a line uses terminal width: "full" takes it all; "full-minus-40" (the default) reserves 40 columns so the auto-compact notice from Claude Code never wraps the line; "full-until-compact" uses the full width until context usage reaches compactThreshold — a context percentage, not a column count.'
+        a: 'flexMode controls how a line uses terminal width: "full" (the default) takes it all; "full-minus-40" reserves 40 columns so the auto-compact notice from Claude Code never wraps the line; "full-until-compact" uses the full width until context usage reaches compactThreshold — a context percentage, not a column count.'
       }
     }
   }

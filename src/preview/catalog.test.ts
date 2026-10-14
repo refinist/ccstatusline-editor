@@ -12,7 +12,7 @@ import { WIDGETS } from '@/widgets';
 const RENDER_OVERRIDES: Record<string, string> = {
   separator: ' | ', // formatSeparator pads both sides of | with spaces
   'git-worktree': '𖠰 main', // previewText adds a symbol prefix by default; the catalog stores the bare value
-  'jj-revision': ' kkmpptxz', // previewText adds a leading space by default
+  'jj-revision': ' kkmpptxz', // previewText prefixes the default jj glyph
   'custom-text': 'custom-text', // when empty, editor mode falls back to showing the type as a placeholder
   'custom-symbol': 'custom-symbol' // same as above
 };
@@ -34,7 +34,7 @@ describe('all-widget default rendering × catalog golden-master comparison', () 
     expect(new Set(types).size).toBe(types.length);
   });
 
-  it('mirrors all 89 widgets in ccstatusline v2.2.26', () => {
-    expect(WIDGETS).toHaveLength(89);
+  it('mirrors all 92 widgets in ccstatusline v2.2.32', () => {
+    expect(WIDGETS).toHaveLength(92);
   });
 });

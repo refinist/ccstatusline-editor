@@ -1,6 +1,7 @@
 import { v4 as uuid } from 'uuid';
+import type { GlobalNumberFormat, NumberFormat } from '@/lib/numberFormat';
 
-// AUTO-GENERATED widget catalog mirroring ccstatusline v2.2.26 (all 89 widgets).
+// Widget catalog mirroring ccstatusline v2.2.32 (all 92 widgets).
 // type     : registry key
 // category : matches ccstatusline ADD WIDGET menu
 // color    : ccstatusline ANSI default color name (mapped to a tailwind class for preview)
@@ -97,7 +98,7 @@ export const WIDGETS: WidgetMeta[] = [
   { type: 'git-unstaged', category: 'Git', color: 'yellow', preview: '*' },
   { type: 'git-untracked', category: 'Git', color: 'red', preview: '?' },
   { type: 'git-ahead-behind', category: 'Git', color: 'cyan', preview: '↑2↓3' },
-  { type: 'git-conflicts', category: 'Git', color: 'red', preview: '⚠ 2' },
+  { type: 'git-conflicts', category: 'Git', color: 'red', preview: '⚠2' },
   { type: 'git-sha', category: 'Git', color: 'gray', preview: 'a1b2c3d' },
   {
     type: 'git-origin-owner',
@@ -134,7 +135,7 @@ export const WIDGETS: WidgetMeta[] = [
     type: 'git-is-fork',
     category: 'Git',
     color: 'yellow',
-    preview: 'isFork: true'
+    preview: '⑂'
   },
   {
     type: 'jj-bookmarks',
@@ -201,7 +202,7 @@ export const WIDGETS: WidgetMeta[] = [
     type: 'tokens-cached',
     category: 'Tokens',
     color: 'cyan',
-    preview: 'Cached: 12k'
+    preview: 'Cached: 12.0k'
   },
   {
     type: 'tokens-total',
@@ -219,13 +220,13 @@ export const WIDGETS: WidgetMeta[] = [
     type: 'cache-read',
     category: 'Cache',
     color: 'green',
-    preview: 'Cache Read: 12k (64.0%)'
+    preview: 'Cache Read: 12.0k (64.0%)'
   },
   {
     type: 'cache-write',
     category: 'Cache',
     color: 'yellow',
-    preview: 'Cache Write: 3k (16.0%)'
+    preview: 'Cache Write: 3.0k (16.0%)'
   },
   {
     type: 'input-speed',
@@ -255,7 +256,7 @@ export const WIDGETS: WidgetMeta[] = [
     type: 'context-window',
     category: 'Context',
     color: 'brightBlack',
-    preview: 'Win: 200k'
+    preview: 'Win: 200.0k'
   },
   {
     type: 'context-percentage',
@@ -280,6 +281,12 @@ export const WIDGETS: WidgetMeta[] = [
     category: 'Session',
     color: 'green',
     preview: 'Cost: $2.45'
+  },
+  {
+    type: 'session-cost-rate',
+    category: 'Session',
+    color: 'green',
+    preview: 'Rate: $4.90/hr'
   },
   {
     type: 'block-timer',
@@ -314,6 +321,12 @@ export const WIDGETS: WidgetMeta[] = [
     category: 'Session',
     color: 'blue',
     preview: 'Account: you@example.com'
+  },
+  {
+    type: 'claude-status',
+    category: 'Core',
+    color: 'green',
+    preview: 'Claude: ok'
   },
   {
     type: 'session-name',
@@ -356,6 +369,12 @@ export const WIDGETS: WidgetMeta[] = [
     category: 'Usage',
     color: 'green',
     preview: 'Overage Used: $106.00'
+  },
+  {
+    type: 'extra-usage-daily-budget',
+    category: 'Usage',
+    color: 'green',
+    preview: 'Daily Budget: $194.70'
   },
   {
     type: 'weekly-sonnet-usage',
@@ -460,7 +479,7 @@ export const WIDGET_BY_TYPE: Map<string, WidgetMeta> = new Map(
 
 /**
  * A widget instance placed on a status line.
- * Field set mirrors ccstatusline's WidgetItem (v2.2.26) so the emitted JSON
+ * Field set mirrors ccstatusline's WidgetItem (v2.2.32) so the emitted JSON
  * is consumed verbatim by the real ccstatusline renderer.
  */
 export interface Widget {
@@ -473,6 +492,8 @@ export interface Widget {
   bold?: boolean;
   /** true = dim whole widget; 'parens' = dim only text inside (...) spans. */
   dim?: boolean | 'parens';
+  /** Per-widget numeric precision. A global `numberFormat` entry for the same kind wins. */
+  numberFormat?: NumberFormat;
   /** Separator glyph (only meaningful for the `separator` widget). */
   character?: string;
   /** Strip the widget's label/icon, leaving the bare value. */
@@ -494,8 +515,6 @@ export interface Widget {
    * meaningful on a merge-group head — merged-in widgets follow their group.
    */
   excludeFromAutoAlign?: boolean;
-  /** Hide this widget entirely. */
-  hide?: boolean;
   metadata?: Record<string, string>;
 }
 
@@ -509,7 +528,13 @@ export interface CcStatusConfig {
   colorLevel: number;
   inheritSeparatorColors: boolean;
   globalBold: boolean;
+  /** Optional global precision, keyed by number kind. Wins over per-widget `numberFormat`. */
+  numberFormat?: GlobalNumberFormat;
   gitCacheTtlSeconds: number;
+  /** Seconds a failed terminal-width probe is reused. 0 probes every render. */
+  terminalWidthCacheTtlSeconds?: number;
+  /** Seconds custom-command output is reused. 0 disables the cache. */
+  customCommandCacheTtlSeconds?: number;
   minimalistMode: boolean;
   /** Auto-separator inserted between every adjacent widget (mutually exclusive with manual separators / powerline). */
   defaultSeparator?: string;
@@ -538,14 +563,16 @@ export interface CcStatusConfig {
 
 export function emptyConfig(): CcStatusConfig {
   return {
-    version: 3,
+    version: 4,
     lines: [[], [], []],
-    flexMode: 'full-minus-40',
+    flexMode: 'full',
     compactThreshold: 60,
     colorLevel: 2,
     inheritSeparatorColors: false,
     globalBold: false,
     gitCacheTtlSeconds: 5,
+    terminalWidthCacheTtlSeconds: 5,
+    customCommandCacheTtlSeconds: 0,
     minimalistMode: false,
     defaultPaddingSide: 'both',
     powerline: {

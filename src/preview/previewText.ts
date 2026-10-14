@@ -1,10 +1,28 @@
-// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.26).
+// Faithful port of each ccstatusline widget's render() isPreview branch (v2.2.32).
 // Given a widget instance, returns the exact text the terminal would show in
 // preview mode for the current options (rawValue, display mode, format, glyph
-// override, cwd style, etc.). Returns null for widgets whose preview never
-// changes with options — the caller falls back to the static catalog preview.
+// override, label, precision, cwd style, etc.). Returns null for widgets whose
+// preview never changes with options — the caller falls back to the catalog.
 
+import {
+  formatBytes,
+  formatCost,
+  formatPercent,
+  formatSpeed,
+  formatTokens,
+  formatUsageCurrency,
+  resolveNumberFormat,
+  type GlobalNumberFormat,
+  type NumberFormat
+} from '@/lib/numberFormat';
+import { isHidden } from '@/widgets/hideStates';
 import type { Widget } from '@/widgets';
+
+export interface PreviewRun {
+  text: string;
+  /** Intrinsic foreground (`#rrggbb`) the theme must not paint over. */
+  color?: string;
+}
 
 // ── primitives (mirror shared/usage-display + utils/usage-windows) ──────────
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
@@ -49,8 +67,66 @@ function usageProgressBar(percent: number, width = 15): string {
 
 // ── widget-level helpers ────────────────────────────────────────────────────
 const raw = (w: Widget) => !!w.rawValue;
-const labeled = (w: Widget, label: string, value: string) =>
-  raw(w) ? value : label + value;
+/** Text-label widgets (getLabelPrefix). `metadata.label` replaces the prefix; '' drops it. */
+const LABELABLE = new Set([
+  'model',
+  'output-style',
+  'context-length',
+  'context-window',
+  'context-percentage',
+  'context-percentage-usable',
+  'context-bar',
+  'claude-session-id',
+  'claude-account-email',
+  'claude-status',
+  'session-clock',
+  'session-cost',
+  'session-cost-rate',
+  'session-name',
+  'free-memory',
+  'terminal-width',
+  'thinking-effort',
+  'tokens-input',
+  'tokens-output',
+  'tokens-cached',
+  'tokens-total',
+  'cache-hit-rate',
+  'cache-read',
+  'cache-write',
+  'cache-timer',
+  'input-speed',
+  'output-speed',
+  'total-speed',
+  'extra-usage-remaining',
+  'extra-usage-used',
+  'extra-usage-daily-budget',
+  'extra-usage-utilization',
+  'session-usage',
+  'weekly-usage',
+  'weekly-sonnet-usage',
+  'weekly-opus-usage',
+  'fable-weekly-usage',
+  'block-timer',
+  'reset-timer',
+  'weekly-reset-timer',
+  'git-staged-files',
+  'git-unstaged-files',
+  'git-untracked-files',
+  'current-working-dir'
+]);
+const labeled = (w: Widget, label: string, value: string) => {
+  if (raw(w)) return value;
+  const prefix =
+    LABELABLE.has(w.type) && w.metadata?.label !== undefined
+      ? w.metadata.label
+      : label;
+  return prefix + value;
+};
+/** The widget's built-in prefix for the current mode, before any label override. */
+export function defaultLabel(w: Widget): string | undefined {
+  if (!LABELABLE.has(w.type)) return undefined;
+  return builtinLabel(w);
+}
 const meta = (w: Widget, key: string) => w.metadata?.[key];
 const metaOn = (w: Widget, key: string) => w.metadata?.[key] === 'true';
 /** symbol + joining space; empty override collapses the space (formatSymbolPrefix). */
@@ -64,36 +140,20 @@ const symPrefix = (w: Widget, def: string) => {
 const LABELED: Record<string, [label: string, value: string]> = {
   model: ['Model: ', 'Claude'],
   'output-style': ['Style: ', 'default'],
-  'context-length': ['Ctx: ', '18.6k'],
-  'context-window': ['Win: ', '200k'],
   'claude-session-id': ['Session ID: ', 'preview-session-id'],
   'claude-account-email': ['Account: ', 'you@example.com'],
   'session-clock': ['Session: ', '2hr 15m'],
-  'session-cost': ['Cost: ', '$2.45'],
   'session-name': ['Session: ', 'my-session'],
-  'free-memory': ['Mem: ', '12.4G/16.0G'],
   'terminal-width': ['Term: ', '80'],
   version: ['v', '1.0.0'],
   'thinking-effort': ['Thinking: ', 'high'],
-  'tokens-input': ['In: ', '15.2k'],
-  'tokens-output': ['Out: ', '3.4k'],
-  'tokens-cached': ['Cached: ', '12k'],
-  'tokens-total': ['Total: ', '30.6k'],
-  'cache-hit-rate': ['Cache Hit: ', '87.0%'],
-  'cache-read': ['Cache Read: ', '12k (64.0%)'],
-  'cache-write': ['Cache Write: ', '3k (16.0%)'],
-  'extra-usage-remaining': ['Overage Left: ', '$3,894.00'],
-  'extra-usage-used': ['Overage Used: ', '$106.00'],
   'git-staged-files': ['S:', '3'],
   'git-unstaged-files': ['M:', '2'],
-  'git-untracked-files': ['?:', '1'],
-  'git-is-fork': ['isFork: ', 'true']
+  'git-untracked-files': ['?:', '1']
 };
 
 // raw ? base : symPrefix(default) + base   (git/jj symbol-prefixed)
 const PREFIXED: Record<string, [def: string, base: string]> = {
-  'git-branch': ['⎇', 'main'],
-  'git-conflicts': ['⚠', '2'],
   'git-worktree': ['𖠰', 'main'],
   'jj-bookmarks': ['🔖', 'main'],
   'jj-workspace': ['◆', 'default']
@@ -108,10 +168,19 @@ const FLAG_SYMBOL: Record<string, string> = {
 };
 
 // speed widgets: [label, sessionAvg, windowed]
-const SPEED: Record<string, [string, string, string]> = {
-  'input-speed': ['In: ', '85.2 t/s', '31.5 t/s'],
-  'output-speed': ['Out: ', '42.5 t/s', '26.8 t/s'],
-  'total-speed': ['Total: ', '127.7 t/s', '58.3 t/s']
+const SPEED: Record<string, [string, number, number]> = {
+  'input-speed': ['In: ', 85.2, 31.5],
+  'output-speed': ['Out: ', 42.5, 26.8],
+  'total-speed': ['Total: ', 127.7, 58.3]
+};
+
+const TOKENS: Record<string, [string, number]> = {
+  'context-length': ['Ctx: ', 18600],
+  'context-window': ['Win: ', 200000],
+  'tokens-input': ['In: ', 15200],
+  'tokens-output': ['Out: ', 3400],
+  'tokens-cached': ['Cached: ', 12000],
+  'tokens-total': ['Total: ', 30600]
 };
 
 // usage-percentage widgets: [label, previewPercent, hasCursor]
@@ -130,31 +199,29 @@ function usagePct(
   w: Widget,
   label: string,
   pct: number,
-  hasCursor: boolean
+  hasCursor: boolean,
+  format: NumberFormat
 ): string {
   const mode = meta(w, 'display');
   const inverted = metaOn(w, 'invert');
   const cursor = hasCursor && metaOn(w, 'cursor') ? 50 : undefined;
   const rendered = inverted ? 100 - pct : pct;
+  const pctText = formatPercent(rendered, format);
   if (mode === 'progress' || mode === 'progress-short') {
     const width = mode === 'progress' ? 32 : 16;
     return labeled(
       w,
       label,
-      `[${timerBar(rendered, width, cursor)}] ${rendered.toFixed(1)}%`
+      `[${timerBar(rendered, width, cursor)}] ${pctText}`
     );
   }
   if (mode === 'slider' || mode === 'slider-only') {
     const s = sliderBar(rendered, 10, cursor);
-    return labeled(
-      w,
-      label,
-      mode === 'slider' ? `${s} ${rendered.toFixed(1)}%` : s
-    );
+    return labeled(w, label, mode === 'slider' ? `${s} ${pctText}` : s);
   }
   // Since v2.2.23 the plain percent honors the direction too (renderedPercent):
   // inverted shows remaining instead of used.
-  return labeled(w, label, `${rendered.toFixed(1)}%`);
+  return labeled(w, label, pctText);
 }
 
 // timer widgets: [labelBar, labelTime, pct, timeCompact, timeFull]
@@ -176,28 +243,33 @@ function timer(
   labelTime: string,
   pct: number,
   tc: string,
-  tf: string
+  tf: string,
+  format: NumberFormat
 ): string {
   const mode = meta(w, 'display');
   const inverted = metaOn(w, 'invert');
   const rendered = inverted ? 100 - pct : pct;
+  const pctText = formatPercent(rendered, format);
   if (mode === 'progress' || mode === 'progress-short') {
     const width = mode === 'progress' ? 32 : 16;
-    return labeled(
-      w,
-      labelBar,
-      `[${timerBar(rendered, width)}] ${rendered.toFixed(1)}%`
-    );
+    return labeled(w, labelBar, `[${timerBar(rendered, width)}] ${pctText}`);
   }
   if (mode === 'slider' || mode === 'slider-only') {
     const s = sliderBar(rendered);
-    return labeled(
-      w,
-      labelBar,
-      mode === 'slider' ? `${s} ${rendered.toFixed(1)}%` : s
-    );
+    return labeled(w, labelBar, mode === 'slider' ? `${s} ${pctText}` : s);
   }
   return labeled(w, labelTime, metaOn(w, 'compact') ? tc : tf);
+}
+
+/** `~` stands for home, so it is not one of the counted segments. */
+function keepLastSegments(path: string, segments: number): string {
+  const useBackslash = path.includes('\\') && !path.includes('/');
+  const outSep = useBackslash ? '\\' : '/';
+  const filtered = path.split(/[\\/]+/).filter(part => part !== '');
+  const prefix = filtered[0] === '~' ? `~${outSep}` : '';
+  const pathSegments = prefix ? filtered.slice(1) : filtered;
+  if (pathSegments.length <= segments) return path;
+  return `${prefix}...${outSep}${pathSegments.slice(-segments).join(outSep)}`;
 }
 
 function cwd(w: Widget): string {
@@ -207,14 +279,15 @@ function cwd(w: Widget): string {
   const hasSeg = !Number.isNaN(segs) && segs > 0;
   let path: string;
   if (fish) path = '~/D/P/my-project';
-  else if (home && hasSeg)
-    path = segs === 1 ? '~/.../my-project' : '~/.../Projects/my-project';
-  else if (home) path = '~/Documents/Projects/my-project';
-  else if (hasSeg) path = segs === 1 ? '.../project' : '.../example/project';
-  else path = '/Users/example/Documents/Projects/my-project';
-  // Optional glyph (default none); in raw mode it replaces the cwd: label.
-  const prefix = symPrefix(w, '');
-  return raw(w) ? `${prefix}${path}` : `${prefix}cwd: ${path}`;
+  else {
+    path = home
+      ? '~/Documents/Projects/my-project'
+      : '/Users/example/Documents/Projects/my-project';
+    if (hasSeg) path = keepLastSegments(path, segs);
+  }
+  // Optional glyph (default none). The cwd: prefix is a real label override.
+  const glyph = symPrefix(w, '');
+  return `${glyph}${labeled(w, 'cwd: ', path)}`;
 }
 
 function vim(w: Widget): string {
@@ -336,12 +409,12 @@ function link(w: Widget): string {
 
 // Mirrors CompactionCounter's SAMPLE_STATS: count 2 (1 auto, 1 manual,
 // 0 unknown), 120k tokens reclaimed. hideZero only applies outside preview.
-function compaction(w: Widget): string {
+function compaction(w: Widget, numberFormat: NumberFormat): string {
   const metric = meta(w, 'metric');
   // A sub-metric renders just that one value as a bare number (getMetricValue).
   if (metric === 'auto' || metric === 'manual') return '1';
   if (metric === 'unknown') return '0';
-  if (metric === 'reclaimed') return '120k';
+  if (metric === 'reclaimed') return formatTokens(120000, numberFormat);
   const format = meta(w, 'format') ?? 'icon-space-number';
   const nerd = metaOn(w, 'nerdFont') && format === 'icon-space-number';
   const icon = nerd ? '' : '↻';
@@ -356,7 +429,8 @@ function compaction(w: Widget): string {
   if (metaOn(w, 'showReclaimed')) {
     // Empty override collapses the symbol; unset falls back to '↓'.
     const s = meta(w, 'symbolReclaimed') ?? '↓';
-    out += s.length > 0 ? ` ${s}120k` : ' 120k';
+    const tokens = formatTokens(120000, numberFormat);
+    out += s.length > 0 ? ` ${s}${tokens}` : ` ${tokens}`;
   }
   return out;
 }
@@ -365,33 +439,148 @@ function contextPct(
   w: Widget,
   label: string,
   used: number,
-  inv: number
+  inv: number,
+  format: NumberFormat
 ): string {
   const pct = metaOn(w, 'inverse') ? inv : used;
   const mode = meta(w, 'display');
+  const pctText = formatPercent(pct, format);
   let val: string;
-  if (mode === 'slider') val = `${sliderBar(pct)} ${pct.toFixed(1)}%`;
+  if (mode === 'slider') val = `${sliderBar(pct)} ${pctText}`;
   else if (mode === 'slider-only') val = sliderBar(pct);
-  else val = `${pct.toFixed(1)}%`;
+  else val = pctText;
   return labeled(w, label, val);
 }
 
-function contextBar(w: Widget): string {
+function contextBar(
+  w: Widget,
+  tokenFormat: NumberFormat,
+  percentFormat: NumberFormat
+): string {
   const mode = meta(w, 'display') ?? 'progress-short';
+  const stats = `${formatTokens(50000, tokenFormat, 0)}/${formatTokens(200000, tokenFormat, 0)} (${formatPercent(25, percentFormat, 0)})`;
   if (mode === 'slider' || mode === 'slider-only') {
     const s = sliderBar(25);
-    const disp = mode === 'slider' ? `${s} 50k/200k (25%)` : s;
-    return raw(w) ? disp : `Context: ${disp}`;
+    const disp = mode === 'slider' ? `${s} ${stats}` : s;
+    return labeled(w, 'Context: ', disp);
   }
   const width = mode === 'progress' ? 32 : 16;
-  const disp = `${usageProgressBar(25, width)} 50k/200k (25%)`;
-  return raw(w) ? disp : `Context: ${disp}`;
+  return labeled(w, 'Context: ', `${usageProgressBar(25, width)} ${stats}`);
+}
+
+function isBarMode(w: Widget): boolean {
+  const d = meta(w, 'display');
+  return (
+    d === 'progress' ||
+    d === 'progress-short' ||
+    d === 'slider' ||
+    d === 'slider-only'
+  );
+}
+
+function builtinLabel(w: Widget): string {
+  const t = w.type;
+  if (LABELED[t]) return LABELED[t][0];
+  if (TOKENS[t]) return TOKENS[t][0];
+  if (SPEED[t]) return SPEED[t][0];
+  if (USAGE_PCT[t]) return USAGE_PCT[t][0];
+  if (TIMER[t]) return isBarMode(w) ? TIMER[t][0] : TIMER[t][1];
+  switch (t) {
+    case 'current-working-dir':
+      return 'cwd: ';
+    case 'context-percentage':
+      return metaOn(w, 'inverse') ? 'Ctx Left: ' : 'Ctx Used: ';
+    case 'context-percentage-usable':
+      return metaOn(w, 'inverse') ? 'Ctx(u) Left: ' : 'Ctx(u) Used: ';
+    case 'context-bar':
+      return 'Context: ';
+    case 'claude-status':
+      return 'Claude: ';
+    case 'session-cost':
+      return 'Cost: ';
+    case 'session-cost-rate':
+      return 'Rate: ';
+    case 'free-memory':
+      return 'Mem: ';
+    case 'cache-hit-rate':
+      return 'Cache Hit: ';
+    case 'cache-read':
+      return 'Cache Read: ';
+    case 'cache-write':
+      return 'Cache Write: ';
+    case 'extra-usage-remaining':
+      return 'Overage Left: ';
+    case 'extra-usage-used':
+      return 'Overage Used: ';
+    case 'extra-usage-daily-budget':
+      return 'Daily Budget: ';
+    default:
+      return '';
+  }
+}
+
+function nf(
+  w: Widget,
+  kind: 'token' | 'speed' | 'percent' | 'memory' | 'cost',
+  global?: GlobalNumberFormat
+): NumberFormat {
+  return resolveNumberFormat(kind, w.numberFormat, global);
+}
+
+function slot(w: Widget, key: string, fallback: string): string {
+  const value = w.metadata?.[key];
+  return value === undefined ? fallback : value;
+}
+
+function applyMaxWidth(text: string, maxWidth?: number): string {
+  if (!maxWidth || maxWidth <= 0 || text.length <= maxWidth) return text;
+  if (maxWidth <= 3) return '.'.repeat(maxWidth);
+  return `${text.slice(0, maxWidth - 3)}...`;
+}
+
+const CLAUDE_STATUS_COLORS: Record<string, string> = {
+  none: '#4e9a06',
+  minor: '#c4a000',
+  major: '#ff8700',
+  critical: '#cc0000'
+};
+const CLAUDE_STATUS_BUCKETS = [
+  'none',
+  'none',
+  'minor',
+  'none',
+  'major',
+  'none',
+  'critical',
+  'none'
+];
+
+/** Multi-colored runs for widgets that paint their own foreground (Claude Status history). */
+export function previewRuns(w: Widget): PreviewRun[] | null {
+  if (w.type !== 'claude-status' || w.metadata?.history !== 'true') return null;
+  return [
+    { text: labeled(w, 'Claude: ', 'ok'), color: CLAUDE_STATUS_COLORS.none },
+    { text: ' ' },
+    ...CLAUDE_STATUS_BUCKETS.map(bucket => ({
+      text: '▮',
+      color: CLAUDE_STATUS_COLORS[bucket]
+    }))
+  ];
 }
 
 // ── dispatch ────────────────────────────────────────────────────────────────
-export function previewText(w: Widget): string | null {
+export function previewText(
+  w: Widget,
+  global?: GlobalNumberFormat
+): string | null {
   const t = w.type;
+  const runs = previewRuns(w);
+  if (runs) return runs.map(run => run.text).join('');
 
+  if (TOKENS[t]) {
+    const [label, count] = TOKENS[t];
+    return labeled(w, label, formatTokens(count, nf(w, 'token', global)));
+  }
   if (LABELED[t]) {
     const [l, v] = LABELED[t];
     return labeled(w, l, v);
@@ -404,15 +593,16 @@ export function previewText(w: Widget): string | null {
   if (SPEED[t]) {
     const [l, sess, win] = SPEED[t];
     const ws = parseInt(meta(w, 'windowSeconds') ?? '', 10);
-    return labeled(w, l, !Number.isNaN(ws) && ws > 0 ? win : sess);
+    const value = !Number.isNaN(ws) && ws > 0 ? win : sess;
+    return labeled(w, l, formatSpeed(value, nf(w, 'speed', global)));
   }
   if (USAGE_PCT[t]) {
     const [l, p, c] = USAGE_PCT[t];
-    return usagePct(w, l, p, c);
+    return usagePct(w, l, p, c, nf(w, 'percent', global));
   }
   if (TIMER[t]) {
     const [lb, lt, p, tc, tf] = TIMER[t];
-    return timer(w, lb, lt, p, tc, tf);
+    return timer(w, lb, lt, p, tc, tf, nf(w, 'percent', global));
   }
 
   switch (t) {
@@ -425,25 +615,48 @@ export function previewText(w: Widget): string | null {
       if (sep === '-') return ' - ';
       return sep;
     }
+    case 'git-branch': {
+      const sample = w.maxWidth ? 'feature/long-branch-name' : 'main';
+      const text = raw(w) ? sample : `${symPrefix(w, '⎇')}${sample}`;
+      return applyMaxWidth(text, w.maxWidth);
+    }
+    case 'git-root-dir':
+      return applyMaxWidth(
+        w.maxWidth ? 'my-long-repository-name' : 'my-repo',
+        w.maxWidth
+      );
+    case 'git-changes':
+    case 'jj-changes':
+      return `(${slot(w, 'symbolInsertions', '+')}42,${slot(w, 'symbolDeletions', '-')}10)`;
+    case 'git-insertions':
+    case 'jj-insertions':
+      return `${slot(w, 'symbolInsertions', '+')}42`;
+    case 'git-deletions':
+    case 'jj-deletions':
+      return `${slot(w, 'symbolDeletions', '-')}10`;
     case 'git-clean-status':
-      return raw(w) ? 'clean' : '✓';
+      return raw(w) ? 'clean' : slot(w, 'symbolClean', '✓');
+    case 'git-conflicts':
+      return raw(w) ? '2' : `${w.character ?? '⚠'}2`;
+    case 'git-is-fork':
+      return raw(w) ? 'true' : (w.character ?? '⑂');
     case 'git-ahead-behind':
       return raw(w)
         ? '2,3'
-        : `${meta(w, 'symbolAhead') ?? '↑'}2${meta(w, 'symbolBehind') ?? '↓'}3`;
+        : `${slot(w, 'symbolAhead', '↑')}2${slot(w, 'symbolBehind', '↓')}3`;
     case 'git-status':
-      return `${meta(w, 'symbolStaged') ?? '+'}${meta(w, 'symbolUnstaged') ?? '*'}`;
+      return `${slot(w, 'symbolStaged', '+')}${slot(w, 'symbolUnstaged', '*')}`;
     case 'git-review': {
-      const s = !metaOn(w, 'hideStatus'),
-        ti = !metaOn(w, 'hideTitle');
-      return `PR #42${s ? ' OPEN' : ''}${ti ? ' Example PR title' : ''}`;
+      const showStatus = !isHidden(w, 'status');
+      const showTitle = !isHidden(w, 'title');
+      return `PR #42${showStatus ? ' OPEN' : ''}${showTitle ? ' Example PR title' : ''}`;
     }
     case 'git-ci-status':
       return raw(w) ? 'failing' : '✗1 ●1 ✓5';
     case 'git-origin-owner-repo':
       return metaOn(w, 'ownerOnlyWhenFork') ? 'owner' : 'owner/repo';
     case 'jj-revision':
-      return raw(w) ? 'kkmpptxz' : ' kkmpptxz';
+      return raw(w) ? 'kkmpptxz' : `${symPrefix(w, '')}kkmpptxz`;
     case 'current-working-dir':
       return cwd(w);
     case 'vim-mode':
@@ -461,13 +674,77 @@ export function previewText(w: Widget): string | null {
     case 'link':
       return link(w);
     case 'compaction-counter':
-      return compaction(w);
+      return compaction(w, nf(w, 'token', global));
     case 'context-percentage':
-      return contextPct(w, 'Ctx Used: ', 9.3, 90.7);
+      return contextPct(
+        w,
+        builtinLabel(w),
+        9.3,
+        90.7,
+        nf(w, 'percent', global)
+      );
     case 'context-percentage-usable':
-      return contextPct(w, 'Ctx(u) Used: ', 11.6, 88.4);
+      return contextPct(
+        w,
+        builtinLabel(w),
+        11.6,
+        88.4,
+        nf(w, 'percent', global)
+      );
     case 'context-bar':
-      return contextBar(w);
+      return contextBar(w, nf(w, 'token', global), nf(w, 'percent', global));
+    case 'session-cost':
+      return labeled(w, 'Cost: ', formatCost(2.45, nf(w, 'cost', global)));
+    case 'session-cost-rate':
+      return labeled(
+        w,
+        'Rate: ',
+        `${formatCost(4.9, nf(w, 'cost', global))}/hr`
+      );
+    case 'extra-usage-remaining':
+      return labeled(
+        w,
+        'Overage Left: ',
+        formatUsageCurrency(3894, nf(w, 'cost', global))
+      );
+    case 'extra-usage-used':
+      return labeled(
+        w,
+        'Overage Used: ',
+        formatUsageCurrency(106, nf(w, 'cost', global))
+      );
+    case 'extra-usage-daily-budget':
+      return labeled(
+        w,
+        'Daily Budget: ',
+        formatUsageCurrency(3894 / 20, nf(w, 'cost', global))
+      );
+    case 'free-memory':
+      return labeled(
+        w,
+        'Mem: ',
+        `${formatBytes(12.4 * 1024 ** 3, nf(w, 'memory', global))}/${formatBytes(16 * 1024 ** 3, nf(w, 'memory', global))}`
+      );
+    case 'cache-hit-rate':
+      return labeled(
+        w,
+        'Cache Hit: ',
+        formatPercent(87, nf(w, 'percent', global))
+      );
+    case 'cache-read':
+      return labeled(
+        w,
+        'Cache Read: ',
+        `${formatTokens(12000, nf(w, 'token', global))} (${formatPercent(64, nf(w, 'percent', global))})`
+      );
+    case 'cache-write':
+      return labeled(
+        w,
+        'Cache Write: ',
+        `${formatTokens(3000, nf(w, 'token', global))} (${formatPercent(16, nf(w, 'percent', global))})`
+      );
+    case 'claude-status':
+      return labeled(w, 'Claude: ', 'ok');
     case 'custom-text':
       return w.customText ?? '';
     case 'custom-symbol':

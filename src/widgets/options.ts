@@ -1,8 +1,8 @@
-// Declarative per-widget capability table, derived from a full audit of
-// ccstatusline v2.2.26 widget sources. Each widget's *type-specific* operations
-// (the things the TUI exposes as per-widget hotkeys / sub-editors) are described
-// here as control descriptors, so the Inspector renders one data-driven panel
-// for all 87 non-layout widgets instead of 87 hand-written forms.
+// Declarative per-widget capability table, derived from ccstatusline v2.2.32.
+// Each widget's *type-specific* operations (the things the TUI exposes as
+// per-widget hotkeys / sub-editors) are described here as control descriptors.
+// Hide conditions live in hideStates.ts (metadata.hide), and label / number
+// precision are universal inspector controls, so they are not listed here.
 //
 // Universal operations (color / background / bold / dim / rawValue / merge /
 // clone / delete) are NOT listed here — the Inspector renders those for every
@@ -20,8 +20,7 @@ type WoField =
   | 'character'
   | 'maxWidth'
   | 'timeout'
-  | 'preserveColors'
-  | 'hide';
+  | 'preserveColors';
 
 export interface WoEnumOption {
   value: string;
@@ -222,10 +221,7 @@ const toggleMeta = (
   metaKey: string,
   extra: Partial<WidgetOption> = {}
 ): WidgetOption => ({ id, control: 'toggle', metaKey, ...extra });
-const hideNoGit = (): WidgetOption => toggleMeta('hideNoGit', 'hideNoGit');
-const hideNoJj = (): WidgetOption => toggleMeta('hideNoJj', 'hideNoJj');
 const remoteOpts = (): WidgetOption[] => [
-  toggleMeta('hideNoRemote', 'hideNoRemote'),
   toggleMeta('linkToRepo', 'linkToRepo')
 ];
 /** Single-symbol glyph override → stored on `item.character` (empty = default). */
@@ -419,7 +415,6 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
 
   // Git — single-symbol glyph + hide-no-git
   'git-branch': [
-    hideNoGit(),
     toggleMeta('linkToRepo', 'linkToRepo', {
       deleteOnOff: true,
       legacyMetaKey: 'linkToGitHub'
@@ -427,34 +422,46 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
     glyph(),
     maxWidth()
   ],
-  'git-changes': [hideNoGit()],
-  'git-insertions': [hideNoGit()],
-  'git-deletions': [hideNoGit()],
-  'git-staged-files': [hideNoGit()],
-  'git-unstaged-files': [hideNoGit()],
-  'git-untracked-files': [hideNoGit()],
-  'git-clean-status': [hideNoGit()],
-  'git-sha': [hideNoGit()],
-  'git-conflicts': [hideNoGit(), glyph()],
-  'git-staged': [hideNoGit(), glyph()],
-  'git-unstaged': [hideNoGit(), glyph()],
-  'git-untracked': [hideNoGit(), glyph()],
-  'git-worktree': [hideNoGit(), glyph()],
+  'git-changes': [
+    symbolSlot('symbolInsertions', 'symbolInsertions'),
+    symbolSlot('symbolDeletions', 'symbolDeletions')
+  ],
+  'git-insertions': [symbolSlot('symbolInsertions', 'symbolInsertions')],
+  'git-deletions': [symbolSlot('symbolDeletions', 'symbolDeletions')],
+  'git-clean-status': [
+    symbolSlot('symbolClean', 'symbolClean'),
+    symbolSlot('symbolDirty', 'symbolDirty')
+  ],
+  'git-conflicts': [
+    glyph(),
+    symbolSlot('symbolClean', 'symbolClean'),
+    {
+      id: 'zeroDisplay',
+      control: 'enum',
+      metaKey: 'zeroDisplay',
+      options: [
+        O('count', 'wopt.opt.conflictCount'),
+        O('clean', 'wopt.opt.conflictClean')
+      ],
+      defaultValue: 'count'
+    }
+  ],
+  'git-staged': [glyph()],
+  'git-unstaged': [glyph()],
+  'git-untracked': [glyph()],
+  'git-worktree': [glyph()],
   'worktree-mode': [glyph()],
   'git-ahead-behind': [
-    hideNoGit(),
     symbolSlot('symbolAhead', 'symbolAhead'),
     symbolSlot('symbolBehind', 'symbolBehind')
   ],
   'git-status': [
-    hideNoGit(),
     symbolSlot('symbolConflicts', 'symbolConflicts'),
     symbolSlot('symbolStaged', 'symbolStaged'),
     symbolSlot('symbolUnstaged', 'symbolUnstaged'),
     symbolSlot('symbolUntracked', 'symbolUntracked')
   ],
   'git-root-dir': [
-    hideNoGit(),
     {
       id: 'ideLink',
       control: 'enum',
@@ -466,13 +473,7 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
     },
     maxWidth()
   ],
-  'git-review': [
-    hideNoGit(),
-    toggleMeta('hideStatus', 'hideStatus'),
-    toggleMeta('hideTitle', 'hideTitle')
-  ],
-  'git-ci-status': [hideNoGit()],
-  'git-is-fork': [toggleMeta('hideWhenNotFork', 'hideWhenNotFork')],
+  'git-is-fork': [glyph()],
   // Git remotes
   'git-origin-owner': remoteOpts(),
   'git-origin-repo': remoteOpts(),
@@ -485,14 +486,15 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
   'git-upstream-owner-repo': remoteOpts(),
 
   // Jujutsu
-  'jj-bookmarks': [hideNoJj(), glyph()],
-  'jj-workspace': [hideNoJj(), glyph()],
-  'jj-root-dir': [hideNoJj()],
-  'jj-changes': [hideNoJj()],
-  'jj-insertions': [hideNoJj()],
-  'jj-deletions': [hideNoJj()],
-  'jj-description': [hideNoJj()],
-  'jj-revision': [hideNoJj()],
+  'jj-bookmarks': [glyph()],
+  'jj-workspace': [glyph()],
+  'jj-changes': [
+    symbolSlot('symbolInsertions', 'symbolInsertions'),
+    symbolSlot('symbolDeletions', 'symbolDeletions')
+  ],
+  'jj-insertions': [symbolSlot('symbolInsertions', 'symbolInsertions')],
+  'jj-deletions': [symbolSlot('symbolDeletions', 'symbolDeletions')],
+  'jj-revision': [glyph()],
 
   // Environment
   'current-working-dir': [
@@ -521,18 +523,9 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
   ],
 
   // Cache
-  'cache-hit-rate': [
-    toggleMeta('cacheSession', 'cacheScopeSession'),
-    toggleMeta('hideWhenEmpty', 'hideWhenEmpty')
-  ],
-  'cache-read': [
-    toggleMeta('cacheSession', 'cacheScopeSession'),
-    toggleMeta('hideWhenEmpty', 'hideWhenEmpty')
-  ],
-  'cache-write': [
-    toggleMeta('cacheSession', 'cacheScopeSession'),
-    toggleMeta('hideWhenEmpty', 'hideWhenEmpty')
-  ],
+  'cache-hit-rate': [toggleMeta('cacheSession', 'cacheScopeSession')],
+  'cache-read': [toggleMeta('cacheSession', 'cacheScopeSession')],
+  'cache-write': [toggleMeta('cacheSession', 'cacheScopeSession')],
   'cache-timer': [
     {
       id: 'ttl',
@@ -541,7 +534,6 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       options: CACHE_TTL,
       defaultValue: '300'
     },
-    toggleMeta('hideWhenEmpty', 'hideWhenEmpty'),
     symbolSlot('symbolHot', 'symbolHot'),
     symbolSlot('symbolFresh', 'symbolFresh'),
     symbolSlot('symbolDraining', 'symbolDraining'),
@@ -654,8 +646,7 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
     {
       ...symbolSlot('symbolReclaimed', 'symbolReclaimed'),
       showIf: isCompactionCount
-    },
-    toggleMeta('hideZero', 'hideZero')
+    }
   ],
 
   // Session
@@ -679,8 +670,7 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
       positiveOnly: true,
       placeholderKey: 'wopt.ph.noLimit',
       showIf: w => w.metadata?.mode === 'list'
-    },
-    toggleMeta('hideWhenEmpty', 'hideWhenEmpty')
+    }
   ],
 
   // Usage
@@ -689,12 +679,10 @@ export const WIDGET_OPTIONS: Record<string, WidgetOption[]> = {
   'weekly-sonnet-usage': usagePct(),
   'weekly-opus-usage': usagePct(),
   'fable-weekly-usage': usagePct(),
-  'extra-usage-utilization': [
-    ...usagePct({ cursor: false }),
-    toggleMeta('hideIfDisabled', 'hideIfDisabled')
-  ],
-  'extra-usage-remaining': [toggleMeta('hideIfDisabled', 'hideIfDisabled')],
-  'extra-usage-used': [toggleMeta('hideIfDisabled', 'hideIfDisabled')],
+  'extra-usage-utilization': [...usagePct({ cursor: false })],
+  'claude-status': [toggleMeta('history', 'history', { deleteOnOff: true })],
+  'session-cost-rate': [toggleMeta('clockTime', 'clockTime')],
+  'extra-usage-daily-budget': [toggleMeta('weekdaysOnly', 'weekdaysOnly')],
   'block-timer': timer({ zoneLocale: false }),
   'reset-timer': timer({ date: true }),
   'weekly-reset-timer': timer({ date: true, weekday: true, hours: true }),
@@ -806,6 +794,9 @@ export function supportsRawValue(type: string): boolean {
 export function supportsColors(w: Widget): boolean {
   if (w.type === 'flex-separator') return false;
   if (w.type === 'custom-command' && w.preserveColors) return false;
+  // The history strip carries its own per-bucket foregrounds.
+  if (w.type === 'claude-status' && w.metadata?.history === 'true')
+    return false;
   return true;
 }
 

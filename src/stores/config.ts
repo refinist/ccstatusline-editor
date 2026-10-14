@@ -10,6 +10,7 @@ import {
   type Widget,
   type WidgetMeta
 } from '@/widgets';
+import { migrateConfig } from '@/widgets/hideStates';
 
 // ccstatusline's schema only enforces `min(1)` lines (no hard max). We cap the
 // editor at 5 so the UI stays tidy; the exported JSON is unaffected.
@@ -453,11 +454,12 @@ export const useConfigStore = defineStore('config', () => {
    * crash it; `next` still wins for anything it does provide.
    */
   function loadConfig(next: CcStatusConfig) {
+    const migrated = migrateConfig(next);
     const defaults = emptyConfig();
     config.value = {
       ...defaults,
-      ...next,
-      powerline: { ...defaults.powerline, ...next.powerline }
+      ...migrated,
+      powerline: { ...defaults.powerline, ...migrated.powerline }
     };
     lineKeys.value = config.value.lines.map(() => uuid());
     selectedId.value = null;

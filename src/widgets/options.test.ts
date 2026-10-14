@@ -65,8 +65,8 @@ describe('optionsFor', () => {
 });
 
 describe('ccstatusline v2.2.24 widget options', () => {
-  it('git-ci-status supports hiding outside git repositories', () => {
-    expect(optionsFor('git-ci-status').map(o => o.id)).toEqual(['hideNoGit']);
+  it('git-ci-status has no type-specific options; hiding lives in metadata.hide', () => {
+    expect(optionsFor('git-ci-status')).toEqual([]);
   });
 
   it('sandbox-status exposes its formats and Nerd Font only in glyph mode', () => {
@@ -89,7 +89,6 @@ describe('ccstatusline v2.2.24 widget options', () => {
   it('cache-timer exposes TTL, empty-state, and all five symbol slots', () => {
     expect(optionsFor('cache-timer').map(o => o.id)).toEqual([
       'ttl',
-      'hideWhenEmpty',
       'symbolHot',
       'symbolFresh',
       'symbolDraining',
@@ -152,7 +151,7 @@ describe('showIf conditional visibility', () => {
     expect(inv.metaKey).toBe('invert');
     expect(inv.showIf).toBeUndefined();
   });
-  it('compaction-counter: composite-display options hide for sub-metrics; hideZero stays (v2.2.23)', () => {
+  it('compaction-counter: composite-display options hide for sub-metrics (v2.2.23)', () => {
     for (const id of [
       'format',
       'showTriggers',
@@ -166,7 +165,6 @@ describe('showIf conditional visibility', () => {
         id
       ).toBe(false);
     }
-    expect(opt('compaction-counter', 'hideZero').showIf).toBeUndefined();
     // an invalid metric value falls back to 'count' (ccstatusline getMetric)
     expect(
       opt('compaction-counter', 'format').showIf!(
@@ -484,10 +482,10 @@ describe('ccstatusline v2.2.22 alignment fixes (round two)', () => {
     ).toBe('vscode');
   });
 
-  it("toggle-off writes false (ccstatusline's general toggleMetadataFlag family): hideNoGit and others", () => {
+  it("toggle-off writes false (ccstatusline's general toggleMetadataFlag family)", () => {
     for (const [type, id] of [
-      ['git-branch', 'hideNoGit'],
-      ['cache-hit-rate', 'hideWhenEmpty'],
+      ['git-origin-owner-repo', 'ownerOnlyWhenFork'],
+      ['cache-hit-rate', 'cacheSession'],
       ['session-usage', 'inverse']
     ] as const) {
       const o = opt(type, id);
@@ -519,8 +517,8 @@ describe('ccstatusline v2.2.22 alignment fixes (round two)', () => {
     expect(opt('skills', 'listLimit').clamp).toBeFalsy();
   });
 
-  it("flexMode default aligns with ccstatusline SettingsSchema's full-minus-40", () => {
-    expect(emptyConfig().flexMode).toBe('full-minus-40');
+  it("flexMode default aligns with ccstatusline SettingsSchema's full", () => {
+    expect(emptyConfig().flexMode).toBe('full');
   });
 
   it('positiveOnly: segments/listLimit/maxWidth/timeout declare a >0 check without declaring min (otherwise the component would clamp 0 to 1, hiding invalid input forever)', () => {

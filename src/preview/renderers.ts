@@ -1,4 +1,4 @@
-import { WIDGET_BY_TYPE, type Widget } from '@/widgets';
+import { WIDGET_BY_TYPE, type CcStatusConfig, type Widget } from '@/widgets';
 import {
   colorClass,
   downgradeHex,
@@ -7,7 +7,8 @@ import {
   resolveBgCss,
   resolveFgCss
 } from './colors';
-import { previewText } from './previewText';
+import { previewRuns, previewText } from './previewText';
+import type { GlobalNumberFormat } from '@/lib/numberFormat';
 
 export interface Token {
   text: string;
@@ -26,6 +27,29 @@ export interface RenderGlobals {
   /** minimalistMode: strip every widget's icon/label/prefix down to its raw value,
    *  as if each widget had rawValue enabled individually. */
   minimalist?: boolean;
+  /** Global numeric precision. A set kind wins over the widget's own numberFormat. */
+  numberFormat?: GlobalNumberFormat;
+}
+
+export function renderGlobals(
+  config: Pick<
+    CcStatusConfig,
+    | 'globalBold'
+    | 'overrideForegroundColor'
+    | 'overrideBackgroundColor'
+    | 'colorLevel'
+    | 'minimalistMode'
+    | 'numberFormat'
+  >
+): RenderGlobals {
+  return {
+    globalBold: config.globalBold || undefined,
+    overrideFg: config.overrideForegroundColor,
+    overrideBg: config.overrideBackgroundColor,
+    colorLevel: config.colorLevel,
+    minimalist: config.minimalistMode || undefined,
+    numberFormat: config.numberFormat
+  };
 }
 
 // Split text into runs, marking the parts inside (...) so dim:'parens' can dim only those.
@@ -135,12 +159,13 @@ export interface SeparatorBoundary {
 }
 
 // Resolve which widget a manually placed `separator` at `index` sits behind, mirroring
-// ccstatusline v2.2.26's backward walk (renderStatusLine): spacing-only separators are
-// transparent — the separator that follows them takes over the boundary and swallows
-// the spacing — while a visible separator or a flex-separator already owns that
-// boundary, which drops this separator entirely (null). ccstatusline also looks past
-// widgets that rendered empty, but the preview has no empty widgets (every widget shows
-// sample output), so that branch can't be reached here.
+// Spacing-only separators are transparent — the separator that follows them takes
+// over the boundary and swallows the spacing — while a visible separator already
+// owns that boundary, which drops this separator entirely (null). A flex separator
+// does not eat the neighbor when the preview has a known width (v2.2.29): that
+// space can be the only boundary once the flex gap shrinks to zero. The editor
+// always lays the line out inside a measured width, so the no-width fallback
+// (drop a spacing separator stranded against flex) does not apply here.
 export function separatorBoundary(
   line: Widget[],
   index: number
@@ -154,7 +179,7 @@ export function separatorBoundary(
       replacesSpacing = true;
       continue;
     }
-    if (prev.type === 'flex-separator') return null;
+    if (prev.type === 'flex-separator') continue;
     return { inheritFrom: prev, replacesSpacing };
   }
   return null;
@@ -232,15 +257,36 @@ export function renderWidget(
   // minimalistMode forces every widget's raw (icon/label-free) form, same as
   // flipping that widget's own rawValue toggle.
   const src = g?.minimalist ? { ...w, rawValue: true } : w;
+  const level = g?.colorLevel ?? 3;
 
   // Reproduce ccstatusline's isPreview output for the widget's current options
   // (rawValue / display mode / format / glyph / cwd style …); fall back to the
   // static catalog preview for widgets whose output never changes with options.
-  let text = previewText(src) ?? meta.preview;
-  if (!text) text = w.type;
+  const runs =
+    (g?.colorLevel ?? 3) > 0 && !g?.overrideFg ? previewRuns(src) : null;
+  if (runs) {
+    const style: Record<string, string> = {};
+    if (w.bold || g?.globalBold) style.fontWeight = '700';
+    if (w.dim === true) style.opacity = '0.55';
+    const bgHex = resolveBgCss(g?.overrideBg ?? w.backgroundColor);
+    const bg = bgHex ? downgradeHex(bgHex, level) : undefined;
+    if (bg) {
+      style.backgroundColor = bg;
+      style.padding = '0 2px';
+      style.borderRadius = '2px';
+    }
+    return runs.flatMap(run => {
+      const runStyle = { ...style };
+      if (run.color) {
+        const shown = downgradeHex(run.color, level);
+        if (shown) runStyle.color = shown;
+      }
+      return splitBars(run.text, undefined, runStyle);
+    });
+  }
 
-  // Terminal color depth: down-samples colors to what that terminal shows (omit = truecolor).
-  const level = g?.colorLevel ?? 3;
+  let text = previewText(src, g?.numberFormat) ?? meta.preview;
+  if (!text) text = w.type;
 
   // Global foreground/background overrides beat the per-widget colors.
   const { cls, style } = foreground(

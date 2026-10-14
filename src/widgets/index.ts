@@ -561,9 +561,14 @@ export interface CcStatusConfig {
   };
 }
 
+/** Highest ccstatusline config schema this editor reads and writes.
+ *  localStorage drafts are restored only when their `version` equals this;
+ *  any other draft is discarded. Import and share links still migrate. */
+export const CONFIG_VERSION = 4;
+
 export function emptyConfig(): CcStatusConfig {
   return {
-    version: 4,
+    version: CONFIG_VERSION,
     lines: [[], [], []],
     flexMode: 'full',
     compactThreshold: 60,

@@ -1,7 +1,7 @@
 // ccstatusline v2.2.32 hideable states (widgets/shared/hideable.ts) and the
 // v3 → v4 migration that folds the old per-widget flags into metadata.hide.
 
-import type { Widget } from '@/widgets';
+import { CONFIG_VERSION, type Widget } from '@/widgets';
 
 export interface HideState {
   key: string;
@@ -335,11 +335,16 @@ function migrateItem(item: Widget): Widget {
   return migrated;
 }
 
-/** Lift a pre-v4 config onto schema v4. v4 configs are returned unchanged. */
+/** Lift a config older than CONFIG_VERSION onto the current schema.
+ *  Configs already at CONFIG_VERSION (or newer) are returned unchanged.
+ *  The only step today is v3 → v4: legacy hide flags fold into metadata.hide.
+ *  Bumping CONFIG_VERSION needs a new step here; the constant alone does not
+ *  know how to rewrite an older shape. */
 export function migrateConfig<T extends { version?: unknown; lines?: unknown }>(
   config: T
 ): T {
-  if (typeof config.version === 'number' && config.version >= 4) return config;
+  if (typeof config.version === 'number' && config.version >= CONFIG_VERSION)
+    return config;
   const lines = Array.isArray(config.lines)
     ? config.lines.map(line =>
         Array.isArray(line)
@@ -351,5 +356,5 @@ export function migrateConfig<T extends { version?: unknown; lines?: unknown }>(
           : line
       )
     : config.lines;
-  return { ...config, version: 4, lines };
+  return { ...config, version: CONFIG_VERSION, lines };
 }

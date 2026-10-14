@@ -2,6 +2,7 @@ import { useRefHistory, useStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { v4 as uuid } from 'uuid';
 import { computed, ref, watch } from 'vue';
+import { readDraft, writeDraft } from '@/lib/draftConfig';
 import {
   defaultConfig,
   emptyConfig,
@@ -17,10 +18,14 @@ import { migrateConfig } from '@/widgets/hideStates';
 export const MAX_LINES = 5;
 
 export const useConfigStore = defineStore('config', () => {
-  // Boot with ccstatusline's default preset (populated line 1) so a first-time
-  // visitor lands on a useful status line, matching the real tool. The "clear"
-  // button (reset) still wipes back to a truly-empty canvas via emptyConfig().
-  const config = ref<CcStatusConfig>(defaultConfig());
+  // Boot from the autosaved draft when its schema version matches this editor.
+  // readDraft drops a missing, corrupt, or different-version draft, and the
+  // factory preset shows instead — the same preset a first visit lands on.
+  // Share links and templates replace this afterwards via loadConfig. The watch
+  // stores whatever is current, so those replacements, clears, and edits become
+  // the next draft. The "clear" button still wipes to emptyConfig().
+  const config = ref<CcStatusConfig>(readDraft() ?? defaultConfig());
+  watch(config, value => writeDraft(value), { deep: true, flush: 'sync' });
 
   // The widget currently open in the Inspector (null = none).
   const selectedId = ref<string | null>(null);

@@ -5,6 +5,7 @@
 - Only use `corepack pnpm` as the package manager — never npm / yarn (`packageManager` pins the pnpm version).
 - After making changes, verify in this order: `corepack pnpm build` (includes vue-tsc type checking) → `corepack pnpm lint` → `corepack pnpm exec vitest run <relevant test files>`.
 - Leave formatting to `corepack pnpm format` or `corepack pnpm lint:fix`; do not hand-format code (the project uses the @refinist config plus the Tailwind class-sorting plugin).
+- Do not edit the `version` field in `package.json`. Version bumps belong to the user's release step (`corepack pnpm release` / bumpp, or an explicit `v*` tag). Feature work may track an upstream ccstatusline version in code comments and behavior, but must leave `package.json` `version` unchanged.
 
 ## Project Structure Map
 

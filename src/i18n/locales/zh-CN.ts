@@ -131,6 +131,8 @@ export default {
     dimParens: '括号内',
     rawValue: '原始值（去标签/图标）',
     mergeNext: '合并右邻',
+    mergeNextHint:
+      '关：与右边的部件之间保留分隔符和间距。合并：去掉分隔符，间距还在；开启 Powerline 时它们合成一段。无间距：内侧间距也去掉，两个部件贴在一起。',
     merge: '合并',
     mergeNoPad: '无间距',
     noAlign: '不参与自动对齐',

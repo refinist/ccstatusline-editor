@@ -138,6 +138,8 @@ export default {
     dimParens: 'Parens',
     rawValue: 'Raw value (no label/icon)',
     mergeNext: 'Merge next',
+    mergeNextHint:
+      'Off keeps the separator and spacing before the next widget. Merge drops that separator but keeps the spacing; in powerline the two share one segment. No-pad also removes the inner spacing so they sit flush.',
     merge: 'Merge',
     mergeNoPad: 'No-pad',
     noAlign: 'Exclude from auto-align',

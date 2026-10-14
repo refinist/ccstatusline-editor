@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { Check, Copy, MousePointerClick, RotateCcw, Trash2 } from '@lucide/vue';
+import {
+  Check,
+  CircleAlert,
+  Copy,
+  MousePointerClick,
+  RotateCcw,
+  Trash2
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import InfoTip from '@/components/InfoTip.vue';
 import ColorField from '@/components/inspector/ColorField.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -831,7 +839,23 @@ function writeNumberFormat(patchFormat: {
             </FieldLegend>
             <FieldGroup>
               <Field v-if="mergeable" orientation="horizontal">
-                <FieldLabel>{{ t('inspector.mergeNext') }}</FieldLabel>
+                <div class="flex min-w-0 flex-auto items-center gap-1">
+                  <FieldLabel>{{ t('inspector.mergeNext') }}</FieldLabel>
+                  <InfoTip side="top" content-class="max-w-64">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      class="text-muted-foreground/50 hover:text-foreground size-5 shrink-0"
+                      :aria-label="t('inspector.mergeNext')"
+                    >
+                      <CircleAlert class="size-3.5" />
+                    </Button>
+                    <template #content>
+                      {{ t('inspector.mergeNextHint') }}
+                    </template>
+                  </InfoTip>
+                </div>
                 <ToggleGroup
                   type="single"
                   variant="outline"

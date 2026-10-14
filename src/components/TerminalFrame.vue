@@ -4,6 +4,7 @@ import PowerlineGlyph from '@/components/PowerlineGlyph.vue';
 import { renderPowerlineLines, type PowerlineItem } from '@/preview/powerline';
 import {
   isSpacingSeparator,
+  renderGlobals,
   renderWidget,
   separatorBoundary,
   separatorToken,
@@ -45,13 +46,7 @@ const props = withDefaults(
 
 const lines = computed(() => props.config.lines.filter(l => l.length > 0));
 
-const globals = computed<RenderGlobals>(() => ({
-  globalBold: props.config.globalBold || undefined,
-  overrideFg: props.config.overrideForegroundColor,
-  overrideBg: props.config.overrideBackgroundColor,
-  colorLevel: props.config.colorLevel,
-  minimalist: props.config.minimalistMode || undefined
-}));
+const globals = computed<RenderGlobals>(() => renderGlobals(props.config));
 
 const defaultSep = computed(() =>
   props.config.powerline.enabled ? '' : (props.config.defaultSeparator ?? '')

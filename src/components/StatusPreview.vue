@@ -54,7 +54,7 @@ const autoWidth = computed(() =>
   narrow.value ? MIN_TERMINAL_WIDTH : wrapperWidth.value
 );
 
-const flexMode = computed(() => store.config.flexMode || 'full-minus-40');
+const flexMode = computed(() => store.config.flexMode || 'full');
 const isUntilCompact = computed(() => flexMode.value === 'full-until-compact');
 const compacted = computed(
   () => isUntilCompact.value && simCtxPct.value >= store.config.compactThreshold

@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { NUMBER_KINDS, type NumberKind } from '@/lib/numberFormat';
 import { guardNumberInput, scrubNumberInput } from '@/lib/numberInput';
 import { POWERLINE_THEME_OPTIONS } from '@/preview/powerline';
 import { useConfigStore } from '@/stores/config';
@@ -152,6 +153,37 @@ function setStartCap(glyph: string | null) {
 function setEndCap(glyph: string | null) {
   setPL({ endCaps: glyph && glyph !== NO_CAP ? [glyph] : [] });
 }
+
+const NUMBER_STYLE = ['default', 'compact', 'whole'] as const;
+function kindStyle(kind: NumberKind): string {
+  const style = cfg.value.numberFormat?.[kind]?.style;
+  return !style || style === 'precise' ? 'default' : style;
+}
+function kindDecimals(kind: NumberKind): number | undefined {
+  return cfg.value.numberFormat?.[kind]?.decimals;
+}
+function writeKind(
+  kind: NumberKind,
+  patch: { style?: string; decimals?: number | undefined }
+) {
+  const current = { ...(cfg.value.numberFormat?.[kind] ?? {}) };
+  if (patch.style !== undefined) {
+    if (patch.style === 'default' || patch.style === 'precise')
+      delete current.style;
+    else current.style = patch.style as 'compact' | 'whole';
+  }
+  if ('decimals' in patch) {
+    if (patch.decimals === undefined) delete current.decimals;
+    else current.decimals = patch.decimals;
+  }
+  const next = { ...(cfg.value.numberFormat ?? {}) };
+  if (current.style === undefined && current.decimals === undefined)
+    delete next[kind];
+  else next[kind] = current;
+  set({
+    numberFormat: Object.keys(next).length > 0 ? next : undefined
+  });
+}
 </script>
 
 <template>
@@ -167,7 +199,7 @@ function setEndCap(glyph: string | null) {
             <Field orientation="horizontal">
               <FieldLabel for="gs-flex">{{ t('global.flexMode') }}</FieldLabel>
               <Select
-                :model-value="cfg.flexMode ?? 'full-minus-40'"
+                :model-value="cfg.flexMode ?? 'full'"
                 @update:model-value="set({ flexMode: $event as any })"
               >
                 <SelectTrigger
@@ -541,6 +573,77 @@ function setEndCap(glyph: string | null) {
 
         <FieldSeparator />
 
+        <!-- ── Number format ── -->
+        <FieldSet>
+          <FieldLegend variant="label">
+            {{ t('global.numberFormat.title') }}
+          </FieldLegend>
+          <FieldGroup class="gap-4">
+            <Field
+              v-for="kind in NUMBER_KINDS"
+              :key="kind"
+              orientation="horizontal"
+            >
+              <FieldLabel :for="`gs-nf-${kind}`">
+                {{ t(`global.numberFormat.kind.${kind}`) }}
+              </FieldLabel>
+              <div class="flex items-center gap-2">
+                <Select
+                  :model-value="kindStyle(kind)"
+                  @update:model-value="
+                    writeKind(kind, { style: String($event) })
+                  "
+                >
+                  <SelectTrigger
+                    :id="`gs-nf-${kind}`"
+                    size="sm"
+                    class="w-28 text-xs"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="style in NUMBER_STYLE"
+                      :key="style"
+                      :value="style"
+                      class="text-xs"
+                    >
+                      {{ t(`global.numberFormat.style.${style}`) }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <NumberField
+                  :min="0"
+                  :max="6"
+                  :model-value="kindDecimals(kind)"
+                  class="w-24"
+                  @update:model-value="
+                    writeKind(kind, {
+                      decimals:
+                        $event == null || Number.isNaN($event)
+                          ? undefined
+                          : Math.min(6, Math.max(0, $event))
+                    })
+                  "
+                >
+                  <NumberFieldContent>
+                    <NumberFieldDecrement class="p-1.5" />
+                    <NumberFieldInput
+                      class="h-7 text-xs"
+                      :placeholder="t('global.numberFormat.decimals')"
+                      @beforeinput="guardNumberInput($event, 6)"
+                      @input="scrubNumberInput($event, 6)"
+                    />
+                    <NumberFieldIncrement class="p-1.5" />
+                  </NumberFieldContent>
+                </NumberField>
+              </div>
+            </Field>
+          </FieldGroup>
+        </FieldSet>
+
+        <FieldSeparator />
+
         <!-- ── Performance ── -->
         <FieldSet>
           <FieldLegend variant="label">{{ t('global.groupPerf') }}</FieldLegend>
@@ -556,6 +659,56 @@ function setEndCap(glyph: string | null) {
                 :model-value="cfg.gitCacheTtlSeconds"
                 class="w-28"
                 @update:model-value="set({ gitCacheTtlSeconds: $event })"
+              >
+                <NumberFieldContent>
+                  <NumberFieldDecrement class="p-1.5" />
+                  <NumberFieldInput
+                    class="h-7 text-xs"
+                    @beforeinput="guardNumberInput($event, 60)"
+                    @input="scrubNumberInput($event, 60)"
+                  />
+                  <NumberFieldIncrement class="p-1.5" />
+                </NumberFieldContent>
+              </NumberField>
+            </Field>
+            <Field orientation="horizontal">
+              <FieldLabel for="gs-term-cache">
+                {{ t('global.terminalWidthCacheTtl') }}
+              </FieldLabel>
+              <NumberField
+                id="gs-term-cache"
+                :min="0"
+                :max="300"
+                :model-value="cfg.terminalWidthCacheTtlSeconds"
+                class="w-28"
+                @update:model-value="
+                  set({ terminalWidthCacheTtlSeconds: $event })
+                "
+              >
+                <NumberFieldContent>
+                  <NumberFieldDecrement class="p-1.5" />
+                  <NumberFieldInput
+                    class="h-7 text-xs"
+                    @beforeinput="guardNumberInput($event, 300)"
+                    @input="scrubNumberInput($event, 300)"
+                  />
+                  <NumberFieldIncrement class="p-1.5" />
+                </NumberFieldContent>
+              </NumberField>
+            </Field>
+            <Field orientation="horizontal">
+              <FieldLabel for="gs-cmd-cache">
+                {{ t('global.customCommandCacheTtl') }}
+              </FieldLabel>
+              <NumberField
+                id="gs-cmd-cache"
+                :min="0"
+                :max="60"
+                :model-value="cfg.customCommandCacheTtlSeconds"
+                class="w-28"
+                @update:model-value="
+                  set({ customCommandCacheTtlSeconds: $event })
+                "
               >
                 <NumberFieldContent>
                   <NumberFieldDecrement class="p-1.5" />

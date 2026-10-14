@@ -37,7 +37,14 @@ import { Switch } from '@/components/ui/switch';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { guardNumberInput, scrubNumberInput } from '@/lib/numberInput';
+import { defaultLabel } from '@/preview/previewText';
 import { useConfigStore } from '@/stores/config';
+import {
+  hideStatesFor,
+  isStateHidden,
+  toggleHideState
+} from '@/widgets/hideStates';
+import { supportsNumberFormat } from '@/widgets/numberKinds';
 import {
   optionsFor,
   supportsColors,
@@ -82,6 +89,18 @@ const isFlexSep = computed(() => w.value?.type === 'flex-separator');
 // foreground/background/bold/dim are only reachable for colorable widgets.
 const canColor = computed(() => !!w.value && supportsColors(w.value));
 const canRaw = computed(() => !!w.value && supportsRawValue(w.value.type));
+const labelDefault = computed(() =>
+  w.value ? defaultLabel(w.value) : undefined
+);
+const hideStates = computed(() => (w.value ? hideStatesFor(w.value.type) : []));
+const canNumber = computed(
+  () => !!w.value && supportsNumberFormat(w.value.type)
+);
+const numberStyle = computed(() => {
+  const style = w.value?.numberFormat?.style;
+  return !style || style === 'precise' ? 'default' : style;
+});
+const NUMBER_STYLE = ['default', 'compact', 'whole'] as const;
 
 // Per-widget specific options, filtered by their showIf predicate.
 const specificOptions = computed<WidgetOption[]>(() => {
@@ -303,6 +322,38 @@ function resetDefaults() {
   if (w.value) store.resetWidgetToDefaults(w.value.id);
   showResetConfirm.value = false;
 }
+
+function setLabel(value: string) {
+  const item = w.value!;
+  const meta = { ...(item.metadata ?? {}) };
+  meta.label = value;
+  patch({ metadata: meta });
+}
+function setHide(key: string, on: boolean) {
+  const next = toggleHideState(w.value!, key, on);
+  patch({ metadata: next.metadata });
+}
+function writeNumberFormat(patchFormat: {
+  style?: string;
+  decimals?: number | undefined;
+}) {
+  const current = { ...(w.value!.numberFormat ?? {}) };
+  if (patchFormat.style !== undefined) {
+    if (patchFormat.style === 'default' || patchFormat.style === 'precise')
+      delete current.style;
+    else current.style = patchFormat.style as 'compact' | 'whole';
+  }
+  if ('decimals' in patchFormat) {
+    if (patchFormat.decimals === undefined) delete current.decimals;
+    else current.decimals = patchFormat.decimals;
+  }
+  patch({
+    numberFormat:
+      current.style === undefined && current.decimals === undefined
+        ? undefined
+        : current
+  });
+}
 </script>
 
 <template>
@@ -509,12 +560,12 @@ function resetDefaults() {
           <FieldSeparator v-if="canColor && canRaw" />
 
           <!-- ── Value ── -->
-          <FieldSet v-if="canRaw">
+          <FieldSet v-if="canRaw || labelDefault !== undefined">
             <FieldLegend variant="label">
               {{ t('inspector.groupValue') }}
             </FieldLegend>
             <FieldGroup>
-              <Field orientation="horizontal">
+              <Field v-if="canRaw" orientation="horizontal">
                 <FieldLabel for="insp-raw">
                   {{ t('inspector.rawValue') }}
                 </FieldLabel>
@@ -526,11 +577,97 @@ function resetDefaults() {
                   "
                 />
               </Field>
+              <Field v-if="labelDefault !== undefined">
+                <FieldLabel for="insp-label">
+                  {{ t('inspector.label') }}
+                </FieldLabel>
+                <Input
+                  id="insp-label"
+                  type="text"
+                  :model-value="w.metadata?.label ?? ''"
+                  :placeholder="labelDefault"
+                  class="h-7 font-mono text-xs"
+                  @update:model-value="setLabel(String($event))"
+                />
+              </Field>
+            </FieldGroup>
+          </FieldSet>
+
+          <FieldSeparator v-if="(canColor || canRaw) && canNumber" />
+
+          <FieldSet v-if="canNumber">
+            <FieldLegend variant="label">
+              {{ t('inspector.numberFormat') }}
+            </FieldLegend>
+            <FieldGroup>
+              <Field orientation="horizontal">
+                <FieldLabel for="insp-nf-style">
+                  {{ t('inspector.numberStyle') }}
+                </FieldLabel>
+                <Select
+                  :model-value="numberStyle"
+                  @update:model-value="
+                    writeNumberFormat({ style: String($event) })
+                  "
+                >
+                  <SelectTrigger
+                    id="insp-nf-style"
+                    size="sm"
+                    class="max-w-[150px] text-xs"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="style in NUMBER_STYLE"
+                      :key="style"
+                      :value="style"
+                      class="text-xs"
+                    >
+                      {{ t(`global.numberFormat.style.${style}`) }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field orientation="horizontal">
+                <FieldLabel for="insp-nf-decimals">
+                  {{ t('inspector.decimals') }}
+                </FieldLabel>
+                <NumberField
+                  id="insp-nf-decimals"
+                  :min="0"
+                  :max="6"
+                  :model-value="w.numberFormat?.decimals"
+                  class="w-28"
+                  @update:model-value="
+                    writeNumberFormat({
+                      decimals:
+                        $event == null || Number.isNaN($event)
+                          ? undefined
+                          : Math.min(6, Math.max(0, $event))
+                    })
+                  "
+                >
+                  <NumberFieldContent>
+                    <NumberFieldDecrement class="p-1.5" />
+                    <NumberFieldInput
+                      class="h-7 text-xs"
+                      :placeholder="t('global.numberFormat.decimals')"
+                      @beforeinput="guardNumberInput($event, 6)"
+                      @input="scrubNumberInput($event, 6)"
+                    />
+                    <NumberFieldIncrement class="p-1.5" />
+                  </NumberFieldContent>
+                </NumberField>
+              </Field>
             </FieldGroup>
           </FieldSet>
 
           <FieldSeparator
-            v-if="(canColor || canRaw) && specificOptions.length"
+            v-if="
+              (canColor || canRaw || labelDefault !== undefined || canNumber) &&
+              specificOptions.length
+            "
           />
 
           <!-- ── Specific ── -->
@@ -653,7 +790,35 @@ function resetDefaults() {
             </FieldGroup>
           </FieldSet>
 
-          <FieldSeparator v-if="canColor || canRaw || specificOptions.length" />
+          <FieldSeparator v-if="hideStates.length" />
+
+          <FieldSet v-if="hideStates.length">
+            <FieldLegend variant="label">
+              {{ t('inspector.groupHide') }}
+            </FieldLegend>
+            <FieldGroup>
+              <Field
+                v-for="state in hideStates"
+                :key="state.key"
+                orientation="horizontal"
+              >
+                <FieldLabel :for="`insp-hide-${state.key}`">
+                  {{ t(`wopt.hide.${state.label}`) }}
+                </FieldLabel>
+                <Switch
+                  :id="`insp-hide-${state.key}`"
+                  :model-value="isStateHidden(w, state)"
+                  @update:model-value="setHide(state.key, $event)"
+                />
+              </Field>
+            </FieldGroup>
+          </FieldSet>
+
+          <FieldSeparator
+            v-if="
+              canColor || canRaw || specificOptions.length || hideStates.length
+            "
+          />
 
           <!-- ── Layout ── merge + powerline no-align; when neither applies
                (separator / flex-separator / last widget on a line with

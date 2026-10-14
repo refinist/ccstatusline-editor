@@ -33,7 +33,7 @@ import {
   resolveBgCss,
   resolveFgCss
 } from './colors';
-import { previewText } from './previewText';
+import { previewRuns, previewText } from './previewText';
 import {
   splitBars,
   splitParens,
@@ -580,7 +580,7 @@ function segmentFg(
 function widgetText(w: Widget, g?: RenderGlobals): string {
   const meta = WIDGET_BY_TYPE.get(w.type);
   const src = g?.minimalist ? { ...w, rawValue: true } : w;
-  let text = previewText(src) ?? meta?.preview ?? '';
+  let text = previewText(src, g?.numberFormat) ?? meta?.preview ?? '';
   if (!text) text = w.type;
   return text;
 }
@@ -595,6 +595,21 @@ function segmentTokens(
   g?: RenderGlobals
 ): Token[] {
   const level = g?.colorLevel ?? 3;
+  const src = g?.minimalist ? { ...w, rawValue: true } : w;
+  const runs = !g?.overrideFg && level > 0 ? previewRuns(src) : null;
+  if (runs) {
+    const base: Record<string, string> = {};
+    if (w.bold || g?.globalBold) base.fontWeight = '700';
+    if (w.dim === true) base.opacity = '0.55';
+    return runs.flatMap(run => {
+      const runStyle = { ...base };
+      if (run.color) {
+        const shown = downgradeHex(run.color, level);
+        if (shown) runStyle.color = shown;
+      }
+      return splitBars(run.text, undefined, runStyle);
+    });
+  }
   const meta = WIDGET_BY_TYPE.get(w.type);
   const { cls, style } = segmentFg(
     fgValue,

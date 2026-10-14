@@ -43,7 +43,7 @@ import {
   exportFilename
 } from '@/lib/exportImage';
 import { buildShortShareUrl, createShortShare } from '@/lib/shareConfig';
-import { renderWidget } from '@/preview/renderers';
+import { renderGlobals, renderWidget } from '@/preview/renderers';
 import { useConfigStore } from '@/stores/config';
 import { WIDGET_BY_TYPE, type Widget } from '@/widgets';
 
@@ -561,7 +561,11 @@ function onShowcase() {
                 @mouseleave="onChipLeave"
               >
                 <span
-                  v-for="(tok, k) in renderWidget(w)"
+                  v-for="(tok, k) in renderWidget(
+                    w,
+                    'editor',
+                    renderGlobals(store.config)
+                  )"
                   :key="k"
                   :class="tok.cls"
                   :style="tok.style"

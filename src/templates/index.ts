@@ -17,7 +17,7 @@ export const TEMPLATES: Template[] = [
     id: 'daily-driver',
     author: 'refinist',
     config: {
-      version: 3,
+      version: 4,
       lines: [
         [
           {
@@ -133,7 +133,7 @@ export const TEMPLATES: Template[] = [
     id: 'daily-driver-powerline',
     author: 'refinist',
     config: {
-      version: 3,
+      version: 4,
       lines: [
         [
           {

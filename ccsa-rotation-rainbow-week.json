@@ -6,7 +6,7 @@
     {
       "name": "Thu",
       "config": {
-        "version": 3,
+        "version": 4,
         "lines": [
           [
             {
@@ -187,7 +187,7 @@
     {
       "name": "Fri",
       "config": {
-        "version": 3,
+        "version": 4,
         "lines": [
           [
             {
@@ -368,7 +368,7 @@
     {
       "name": "Sat",
       "config": {
-        "version": 3,
+        "version": 4,
         "lines": [
           [
             {
@@ -549,7 +549,7 @@
     {
       "name": "Sun",
       "config": {
-        "version": 3,
+        "version": 4,
         "lines": [
           [
             {
@@ -730,7 +730,7 @@
     {
       "name": "Mon",
       "config": {
-        "version": 3,
+        "version": 4,
         "lines": [
           [
             {
@@ -911,7 +911,7 @@
     {
       "name": "Tue",
       "config": {
-        "version": 3,
+        "version": 4,
         "lines": [
           [
             {
@@ -1092,7 +1092,7 @@
     {
       "name": "Wed",
       "config": {
-        "version": 3,
+        "version": 4,
         "lines": [
           [
             {

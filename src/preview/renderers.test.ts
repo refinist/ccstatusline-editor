@@ -177,11 +177,15 @@ describe('separatorBoundary / isSpacingSeparator', () => {
     expect(separatorBoundary(line('model', sep(':'), sep(' ')), 2)).toBeNull();
   });
 
-  it('is dropped at the start of a line and across a flex separator', () => {
+  it('is dropped at the start of a line, and a separator after flex still renders', () => {
     expect(separatorBoundary(line(sep('|'), 'model'), 0)).toBeNull();
-    expect(
-      separatorBoundary(line('model', 'flex-separator', sep('|')), 2)
-    ).toBeNull();
+    const l = line('model', 'flex-separator', sep('|'));
+    expect(separatorBoundary(l, 2)).toEqual({
+      inheritFrom: l[0],
+      replacesSpacing: false
+    });
+    const spacing = line('model', 'flex-separator', sep(' '));
+    expect(separatorBoundary(spacing, 2)?.inheritFrom).toBe(spacing[0]);
   });
 });
 

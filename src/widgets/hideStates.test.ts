@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { CONFIG_VERSION, type Widget } from '@/widgets';
 import { isHidden, migrateConfig, toggleHideState } from '@/widgets/hideStates';
-import type { Widget } from '@/widgets';
 
 const item = (partial: Partial<Widget> & { type: string }): Widget => ({
   id: 'w',
@@ -20,7 +20,7 @@ describe('v3 → v4 hide migration', () => {
         ]
       ]
     });
-    expect(next.version).toBe(4);
+    expect(next.version).toBe(CONFIG_VERSION);
     expect(next.lines?.[0]?.[0]?.metadata).toEqual({
       hide: 'no-git',
       linkToRepo: 'true'
@@ -44,9 +44,9 @@ describe('v3 → v4 hide migration', () => {
     );
   });
 
-  it('leaves a v4 config untouched', () => {
+  it('leaves a current-schema config untouched', () => {
     const config = {
-      version: 4,
+      version: CONFIG_VERSION,
       lines: [[item({ type: 'model' })]]
     };
     expect(migrateConfig(config)).toBe(config);

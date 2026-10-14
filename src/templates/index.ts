@@ -1,4 +1,4 @@
-import type { CcStatusConfig } from '@/widgets';
+import { CONFIG_VERSION, type CcStatusConfig } from '@/widgets';
 
 export interface Template {
   id: string;
@@ -17,7 +17,7 @@ export const TEMPLATES: Template[] = [
     id: 'daily-driver',
     author: 'refinist',
     config: {
-      version: 4,
+      version: CONFIG_VERSION,
       lines: [
         [
           {
@@ -133,7 +133,7 @@ export const TEMPLATES: Template[] = [
     id: 'daily-driver-powerline',
     author: 'refinist',
     config: {
-      version: 4,
+      version: CONFIG_VERSION,
       lines: [
         [
           {
